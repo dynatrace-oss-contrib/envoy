@@ -259,7 +259,13 @@ EXTENSIONS = {
     "envoy.tracers.xray":                               "//source/extensions/tracers/xray:config",
     "envoy.tracers.skywalking":                         "//source/extensions/tracers/skywalking:config",
     "envoy.tracers.opentelemetry":                      "//source/extensions/tracers/opentelemetry:config",
+    
+    #
+    # Sampler
+    #
 
+    "envoy.tracers.opentelemetry.samplers.all":         "//source/extensions/tracers/opentelemetry/samplers/all:config",
+    
     #
     # Transport sockets
     #
