@@ -5,11 +5,7 @@ package envoy.config.trace.v3;
 import "envoy/config/core/v3/extension.proto";
 import "envoy/config/core/v3/grpc_service.proto";
 
-import "google/protobuf/any.proto";
-
 import "udpa/annotations/status.proto";
-import "validate/validate.proto";
-
 
 option java_package = "io.envoyproxy.envoy.config.trace.v3";
 option java_outer_classname = "OpentelemetryProto";
@@ -18,16 +14,6 @@ option go_package = "github.com/envoyproxy/go-control-plane/envoy/config/trace/v
 option (udpa.annotations.file_status).package_version_status = ACTIVE;
 
 // [#protodoc-title: OpenTelemetry tracer]
-
-message Sampler {
-  // The name of the sampler to instantiate.
-  string name = 1 [(validate.rules).string = {min_len: 1}];
-
-  // Sampler specific configuration which depends on the sampler being
-  // instantiated. See the supported sampler for further documentation.
-  // Not required for sampler that don't need a config.
-  google.protobuf.Any typed_config = 2;
-}
 
 // Configuration for the OpenTelemetry tracer.
 //  [#extension: envoy.tracers.opentelemetry]
@@ -43,5 +29,5 @@ message OpenTelemetryConfig {
 
   // optional sampler which is used in the opentelemetry tracer
   // [#extension-category: envoy.tracers.opentelemetry.samplers]
-  optional core.v3.TypedExtensionConfig sampler = 3;
+  core.v3.TypedExtensionConfig sampler = 3;
 }

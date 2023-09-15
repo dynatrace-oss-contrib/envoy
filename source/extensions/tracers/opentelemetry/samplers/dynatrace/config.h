@@ -2,9 +2,10 @@
 
 #include <string>
 
-#include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
-
 #include "envoy/extensions/tracers/opentelemetry/samplers/v3/dynatrace_sampler.pb.h"
+#include "envoy/registry/registry.h"
+
+#include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -22,16 +23,14 @@ public:
    * @param context
    * @return SamplerPtr
    */
-  SamplerPtr
-  createSampler(const Protobuf::Message& config) override;
+  SamplerPtr createSampler(const Protobuf::Message& config,
+                           Server::Configuration::TracerFactoryContext& context) override;
 
   ProtobufTypes::MessagePtr createEmptyConfigProto() override {
-    return std::make_unique<envoy::extensions::tracers::opentelemetry::samplers::v3::
-                                DynatraceSamplerConfig>();
+    return std::make_unique<
+        envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig>();
   }
-  std::string name() const override {
-    return "envoy.tracers.opentelemetry.samplers.dynatrace";
-  }
+  std::string name() const override { return "envoy.tracers.opentelemetry.samplers.dynatrace"; }
 };
 
 DECLARE_FACTORY(DynatraceSamplerFactory);

@@ -37,7 +37,8 @@ class Tracer : Logger::Loggable<Logger::Id::tracing> {
 public:
   Tracer(OpenTelemetryGrpcTraceExporterPtr exporter, Envoy::TimeSource& time_source,
          Random::RandomGenerator& random, Runtime::Loader& runtime, Event::Dispatcher& dispatcher,
-         OpenTelemetryTracerStats tracing_stats, const std::string& service_name, SamplerPtr sampler);
+         OpenTelemetryTracerStats tracing_stats, const std::string& service_name,
+         SamplerPtr sampler);
 
   void sendSpan(::opentelemetry::proto::trace::v1::Span& span);
 
@@ -46,6 +47,8 @@ public:
 
   Tracing::SpanPtr startSpan(const Tracing::Config& config, const std::string& operation_name,
                              SystemTime start_time, const SpanContext& previous_span_context);
+
+  SamplerPtr sampler() { return sampler_; }
 
 private:
   /**
@@ -92,6 +95,10 @@ public:
    */
   void setSampled(bool sampled) override { sampled_ = sampled; };
 
+  std::string getTraceIdAsHex() const override { return absl::BytesToHexString(span_.trace_id()); };
+
+  // Additional methods
+
   /**
    * @return whether or not the sampled attribute is set
    */
@@ -101,8 +108,6 @@ public:
   std::string getBaggage(absl::string_view /*key*/) override { return EMPTY_STRING; };
   void setBaggage(absl::string_view /*key*/, absl::string_view /*value*/) override{};
 
-  // Additional methods
-
   /**
    * Sets the span's trace id attribute.
    */
@@ -110,12 +115,10 @@ public:
     span_.set_trace_id(absl::HexStringToBytes(trace_id_hex));
   }
 
-  std::string getTraceIdAsHex() const override { return absl::BytesToHexString(span_.trace_id()); };
-
   /**
    * Sets the span's id.
    */
-  void setId(const absl::string_view& span_id_hex) {
+  void setSpanId(const absl::string_view& span_id_hex) {
     span_.set_span_id(absl::HexStringToBytes(span_id_hex));
   }
 
@@ -128,9 +131,9 @@ public:
     span_.set_parent_span_id(absl::HexStringToBytes(parent_span_id_hex));
   }
 
-  ::opentelemetry::proto::trace::v1::Span::SpanKind spankind() { return span_.kind(); }
+  ::opentelemetry::proto::trace::v1::Span::SpanKind spankind() const { return span_.kind(); }
 
-  std::string tracestate() { return span_.trace_state(); }
+  std::string tracestate() const { return span_.trace_state(); }
 
   /**
    * Sets the span's tracestate.

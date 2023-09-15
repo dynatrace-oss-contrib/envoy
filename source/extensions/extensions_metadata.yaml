@@ -1136,6 +1136,20 @@ envoy.tracers.opentelemetry:
   status: wip
   type_urls:
   - envoy.config.trace.v3.OpenTelemetryConfig
+envoy.tracers.opentelemetry.samplers.always_on:
+  categories:
+  - envoy.tracers.opentelemetry.samplers
+  security_posture: unknown
+  status: wip
+  type_urls:
+  - envoy.extensions.tracers.opentelemetry.samplers.v3.AlwaysOnSamplerConfig
+envoy.tracers.opentelemetry.samplers.dynatrace:
+  categories:
+  - envoy.tracers.opentelemetry.samplers
+  security_posture: unknown
+  status: wip
+  type_urls:
+  - envoy.extensions.tracers.opentelemetry.samplers.v3.DynatraceSamplerConfig
 envoy.tracers.skywalking:
   categories:
   - envoy.tracers
@@ -1650,8 +1664,3 @@ envoy.config_mux.sotw_grpc_mux_factory:
   - envoy.config_mux
   security_posture: unknown
   status: stable
-envoy.tracers.opentelemetry.samplers.all:
-  categories:
-  - envoy.tracers.opentelemetry.samplers
-  security_posture: unknown
-  status: wip
