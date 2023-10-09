@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package envoy.config.trace.v3;
 
+import "envoy/config/core/v3/extension.proto";
 import "envoy/config/core/v3/grpc_service.proto";
 
 import "udpa/annotations/status.proto";
@@ -25,4 +26,8 @@ message OpenTelemetryConfig {
   // The name for the service. This will be populated in the ResourceSpan Resource attributes.
   // If it is not provided, it will default to "unknown_service:envoy".
   string service_name = 2;
+
+  // optional sampler which is used in the opentelemetry tracer
+  // [#extension-category: envoy.tracers.opentelemetry.samplers]
+  optional core.v3.TypedExtensionConfig sampler = 3;
 }

@@ -8,6 +8,7 @@
 #include "source/common/common/logger.h"
 #include "source/common/config/utility.h"
 #include "source/common/tracing/http_tracer_impl.h"
+#include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 
 #include "opentelemetry/proto/collector/trace/v1/trace_service.pb.h"
 #include "opentelemetry/proto/trace/v1/trace.pb.h"
@@ -26,23 +27,37 @@ Driver::Driver(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetr
       tracing_stats_{OPENTELEMETRY_TRACER_STATS(
           POOL_COUNTER_PREFIX(context.serverFactoryContext().scope(), "tracing.opentelemetry"))} {
   auto& factory_context = context.serverFactoryContext();
-  // Create the tracer in Thread Local Storage.
-  tls_slot_ptr_->set([opentelemetry_config, &factory_context, this](Event::Dispatcher& dispatcher) {
-    OpenTelemetryGrpcTraceExporterPtr exporter;
-    if (opentelemetry_config.has_grpc_service()) {
-      Grpc::AsyncClientFactoryPtr&& factory =
-          factory_context.clusterManager().grpcAsyncClientManager().factoryForGrpcService(
-              opentelemetry_config.grpc_service(), factory_context.scope(), true);
-      const Grpc::RawAsyncClientSharedPtr& async_client_shared_ptr =
-          factory->createUncachedRawAsyncClient();
-      exporter = std::make_unique<OpenTelemetryGrpcTraceExporter>(async_client_shared_ptr);
-    }
-    TracerPtr tracer = std::make_unique<Tracer>(
-        std::move(exporter), factory_context.timeSource(), factory_context.api().randomGenerator(),
-        factory_context.runtime(), dispatcher, tracing_stats_, opentelemetry_config.service_name());
 
-    return std::make_shared<TlsTracer>(std::move(tracer));
-  });
+  // Create the samper if configured
+  SamplerSharedPtr sampler;
+  if (opentelemetry_config.has_sampler()) {
+    auto& sampler_config = opentelemetry_config.sampler();
+    auto* factory = Envoy::Config::Utility::getFactory<SamplerFactory>(sampler_config);
+    if (!factory) {
+      throw EnvoyException(fmt::format("Sampler factory not found: '{}'", sampler_config.name()));
+    }
+    sampler = factory->createSampler(sampler_config.typed_config(), context);
+  }
+
+  // Create the tracer in Thread Local Storage.
+  tls_slot_ptr_->set(
+      [opentelemetry_config, &factory_context, this, sampler](Event::Dispatcher& dispatcher) {
+        OpenTelemetryGrpcTraceExporterPtr exporter;
+        if (opentelemetry_config.has_grpc_service()) {
+          Grpc::AsyncClientFactoryPtr&& factory =
+              factory_context.clusterManager().grpcAsyncClientManager().factoryForGrpcService(
+                  opentelemetry_config.grpc_service(), factory_context.scope(), true);
+          const Grpc::RawAsyncClientSharedPtr& async_client_shared_ptr =
+              factory->createUncachedRawAsyncClient();
+          exporter = std::make_unique<OpenTelemetryGrpcTraceExporter>(async_client_shared_ptr);
+        }
+        TracerPtr tracer = std::make_unique<Tracer>(
+            std::move(exporter), factory_context.timeSource(),
+            factory_context.api().randomGenerator(), factory_context.runtime(), dispatcher,
+            tracing_stats_, opentelemetry_config.service_name(), sampler);
+
+        return std::make_shared<TlsTracer>(std::move(tracer));
+      });
 }
 
 Tracing::SpanPtr Driver::startSpan(const Tracing::Config& config,

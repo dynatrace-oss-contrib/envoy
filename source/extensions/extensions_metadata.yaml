@@ -1136,6 +1136,11 @@ envoy.tracers.opentelemetry:
   status: wip
   type_urls:
   - envoy.config.trace.v3.OpenTelemetryConfig
+envoy.tracers.opentelemetry.samplers.all:
+  categories:
+  - envoy.tracers.opentelemetry.samplers
+  security_posture: unknown
+  status: wip
 envoy.tracers.skywalking:
   categories:
   - envoy.tracers

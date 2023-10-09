@@ -94,9 +94,9 @@ void Span::setTag(absl::string_view name, absl::string_view value) {
 Tracer::Tracer(OpenTelemetryGrpcTraceExporterPtr exporter, Envoy::TimeSource& time_source,
                Random::RandomGenerator& random, Runtime::Loader& runtime,
                Event::Dispatcher& dispatcher, OpenTelemetryTracerStats tracing_stats,
-               const std::string& service_name)
+               const std::string& service_name, SamplerSharedPtr sampler)
     : exporter_(std::move(exporter)), time_source_(time_source), random_(random), runtime_(runtime),
-      tracing_stats_(tracing_stats), service_name_(service_name) {
+      tracing_stats_(tracing_stats), service_name_(service_name), sampler_(sampler) {
   if (service_name.empty()) {
     service_name_ = std::string{kDefaultServiceName};
   }
@@ -142,6 +142,23 @@ void Tracer::flushSpans() {
   span_buffer_.clear();
 }
 
+void Tracer::callSampler(const absl::StatusOr<SpanContext> span_context, Span& new_span,
+                         const std::string& operation_name) {
+  if (!sampler_) {
+    return;
+  }
+  const auto sampling_result = sampler_->shouldSample(
+      span_context, operation_name, new_span.getTraceIdAsHex(), new_span.spankind(), {}, {});
+  new_span.setSampled(sampling_result.isSampled());
+
+  if (sampling_result.attributes) {
+    for (auto const& attribute : *sampling_result.attributes) {
+      new_span.setTag(attribute.first, attribute.second);
+    }
+  }
+  new_span.setTracestate(sampling_result.tracestate);
+}
+
 void Tracer::sendSpan(::opentelemetry::proto::trace::v1::Span& span) {
   span_buffer_.push_back(span);
   const uint64_t min_flush_spans =
@@ -162,6 +179,8 @@ Tracing::SpanPtr Tracer::startSpan(const Tracing::Config& config, const std::str
   new_span.setTraceId(absl::StrCat(Hex::uint64ToHex(trace_id_high), Hex::uint64ToHex(trace_id)));
   uint64_t span_id = random_.random();
   new_span.setId(Hex::uint64ToHex(span_id));
+  absl::StatusOr<SpanContext> span_context = absl::InvalidArgumentError("no parent span");
+  callSampler(span_context, new_span, operation_name);
   return std::make_unique<Span>(new_span);
 }
 
@@ -183,6 +202,7 @@ Tracing::SpanPtr Tracer::startSpan(const Tracing::Config& config, const std::str
   if (!previous_span_context.tracestate().empty()) {
     new_span.setTracestate(std::string{previous_span_context.tracestate()});
   }
+  callSampler(previous_span_context, new_span, operation_name);
   return std::make_unique<Span>(new_span);
 }
 
