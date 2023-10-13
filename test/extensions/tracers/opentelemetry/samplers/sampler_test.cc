@@ -128,16 +128,31 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
 
   auto driver = std::make_unique<Driver>(opentelemetry_config, context);
 
-  EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _));
-  driver->startSpan(config, trace_context, stream_info, "operation_name",
-                    {Tracing::Reason::Sampling, true});
-
-  // now, let shouldSample return a result containing additonal attributes
+  // shouldSample returns a result without additonal attributes and Decision::RECORD_AND_SAMPLE
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
       .WillOnce([](const absl::StatusOr<SpanContext>&, const std::string&, const std::string&,
                    ::opentelemetry::proto::trace::v1::Span::SpanKind,
                    const std::map<std::string, std::string>&, const std::set<SpanContext>&) {
         SamplingResult res;
+        res.decision = Decision::RECORD_AND_SAMPLE;
+        return res;
+      });
+
+  Tracing::SpanPtr tracing_span = driver->startSpan(
+      config, trace_context, stream_info, "operation_name", {Tracing::Reason::Sampling, true});
+  // startSpan returns a Tracing::SpanPtr. Tracing::Span has no sampled() method.
+  // We know that the underlying span is Extensions::Tracers::OpenTelemetry::Span
+  // So the dynamic_cast should be safe.
+  std::unique_ptr<Span> span(dynamic_cast<Span*>(tracing_span.release()));
+  EXPECT_TRUE(span->sampled());
+
+  // shouldSamples return a result containing additional attributes and Decision::DROP
+  EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
+      .WillOnce([](const absl::StatusOr<SpanContext>&, const std::string&, const std::string&,
+                   ::opentelemetry::proto::trace::v1::Span::SpanKind,
+                   const std::map<std::string, std::string>&, const std::set<SpanContext>&) {
+        SamplingResult res;
+        res.decision = Decision::DROP;
         std::map<std::string, std::string> attributes;
         attributes["key"] = "value";
         attributes["another_key"] = "another_value";
@@ -145,8 +160,10 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
             std::make_unique<const std::map<std::string, std::string>>(std::move(attributes));
         return res;
       });
-  driver->startSpan(config, trace_context, stream_info, "operation_name",
-                    {Tracing::Reason::Sampling, true});
+  tracing_span = driver->startSpan(config, trace_context, stream_info, "operation_name",
+                                   {Tracing::Reason::Sampling, true});
+  std::unique_ptr<Span> unsampled_span(dynamic_cast<Span*>(tracing_span.release()));
+  EXPECT_FALSE(unsampled_span->sampled());
 }
 
 TEST(SamplingResultTest, TestSamplingResult) {
