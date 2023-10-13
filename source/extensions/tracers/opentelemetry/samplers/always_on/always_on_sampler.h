@@ -12,7 +12,7 @@ namespace Tracers {
 namespace OpenTelemetry {
 
 /**
- * @brief A sampler which samples every span variable.
+ * @brief A sampler which samples every span.
  * https://opentelemetry.io/docs/specs/otel/trace/sdk/#alwayson
  * - Returns RECORD_AND_SAMPLE always.
  * - Description MUST be AlwaysOnSampler.

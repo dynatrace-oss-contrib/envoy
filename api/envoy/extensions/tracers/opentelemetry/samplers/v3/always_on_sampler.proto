@@ -11,6 +11,12 @@ option go_package = "github.com/envoyproxy/go-control-plane/envoy/extensions/tra
 option (udpa.annotations.file_status).package_version_status = ACTIVE;
 
 // [#protodoc-title: Always On Sampler config]
+// Configuration for the "AlwaysOn" Sampler extension.
+// The sampler follows the the "AlwaysOn" implementation from the OpenTelemetry
+// SDK specification.
+//
+// See:
+// `AlwaysOn specification <https://opentelemetry.io/docs/specs/otel/trace/sdk/#alwayson>`_
 // [#extension: envoy.tracers.opentelemetry.samplers.always_on]
 
 message AlwaysOnSamplerConfig {
