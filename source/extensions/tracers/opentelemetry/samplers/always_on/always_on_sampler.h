@@ -26,7 +26,7 @@ public:
                               const std::string& trace_id, const std::string& name,
                               ::opentelemetry::proto::trace::v1::Span::SpanKind spankind,
                               const std::map<std::string, std::string>& attributes,
-                              const std::set<SpanContext>& links) override;
+                              const std::vector<SpanContext>& links) override;
   std::string getDescription() const override;
 
 private:

@@ -2,8 +2,8 @@
 
 #include <map>
 #include <memory>
-#include <set>
 #include <string>
+#include <vector>
 
 #include "envoy/config/typed_config.h"
 #include "envoy/server/tracer_config.h"
@@ -72,7 +72,7 @@ public:
                                       const std::string& trace_id, const std::string& name,
                                       ::opentelemetry::proto::trace::v1::Span::SpanKind spankind,
                                       const std::map<std::string, std::string>& attributes,
-                                      const std::set<SpanContext>& links) PURE;
+                                      const std::vector<SpanContext>& links) PURE;
 
   /**
    * @brief Returns a sampler description or name.

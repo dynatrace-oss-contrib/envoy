@@ -28,7 +28,7 @@ public:
   MOCK_METHOD(SamplingResult, shouldSample,
               ((const absl::StatusOr<SpanContext>&), (const std::string&), (const std::string&),
                (::opentelemetry::proto::trace::v1::Span::SpanKind),
-               (const std::map<std::string, std::string>&), (const std::set<SpanContext>&)),
+               (const std::map<std::string, std::string>&), (const std::vector<SpanContext>&)),
               (override));
   MOCK_METHOD(std::string, getDescription, (), (const, override));
 };
@@ -132,9 +132,10 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
       .WillOnce([](const absl::StatusOr<SpanContext>&, const std::string&, const std::string&,
                    ::opentelemetry::proto::trace::v1::Span::SpanKind,
-                   const std::map<std::string, std::string>&, const std::set<SpanContext>&) {
+                   const std::map<std::string, std::string>&, const std::vector<SpanContext>&) {
         SamplingResult res;
         res.decision = Decision::RECORD_AND_SAMPLE;
+        res.tracestate = "this_is=tracesate";
         return res;
       });
 
@@ -145,12 +146,13 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
   // So the dynamic_cast should be safe.
   std::unique_ptr<Span> span(dynamic_cast<Span*>(tracing_span.release()));
   EXPECT_TRUE(span->sampled());
+  EXPECT_STREQ(span->tracestate().c_str(), "this_is=tracesate");
 
   // shouldSamples return a result containing additional attributes and Decision::DROP
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
       .WillOnce([](const absl::StatusOr<SpanContext>&, const std::string&, const std::string&,
                    ::opentelemetry::proto::trace::v1::Span::SpanKind,
-                   const std::map<std::string, std::string>&, const std::set<SpanContext>&) {
+                   const std::map<std::string, std::string>&, const std::vector<SpanContext>&) {
         SamplingResult res;
         res.decision = Decision::DROP;
         std::map<std::string, std::string> attributes;
@@ -158,12 +160,14 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
         attributes["another_key"] = "another_value";
         res.attributes =
             std::make_unique<const std::map<std::string, std::string>>(std::move(attributes));
+        res.tracestate = "this_is=another_tracesate";
         return res;
       });
   tracing_span = driver->startSpan(config, trace_context, stream_info, "operation_name",
                                    {Tracing::Reason::Sampling, true});
   std::unique_ptr<Span> unsampled_span(dynamic_cast<Span*>(tracing_span.release()));
   EXPECT_FALSE(unsampled_span->sampled());
+  EXPECT_STREQ(unsampled_span->tracestate().c_str(), "this_is=another_tracesate");
 }
 
 TEST(SamplingResultTest, TestSamplingResult) {
