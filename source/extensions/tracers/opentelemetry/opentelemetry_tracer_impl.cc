@@ -21,14 +21,11 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
-Driver::Driver(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config,
-               Server::Configuration::TracerFactoryContext& context)
-    : tls_slot_ptr_(context.serverFactoryContext().threadLocal().allocateSlot()),
-      tracing_stats_{OPENTELEMETRY_TRACER_STATS(
-          POOL_COUNTER_PREFIX(context.serverFactoryContext().scope(), "tracing.opentelemetry"))} {
-  auto& factory_context = context.serverFactoryContext();
+namespace {
 
-  // Create the samper if configured
+SamplerSharedPtr
+tryCreateSamper(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config,
+                Server::Configuration::TracerFactoryContext& context) {
   SamplerSharedPtr sampler;
   if (opentelemetry_config.has_sampler()) {
     auto& sampler_config = opentelemetry_config.sampler();
@@ -38,6 +35,20 @@ Driver::Driver(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetr
     }
     sampler = factory->createSampler(sampler_config.typed_config(), context);
   }
+  return sampler;
+}
+
+} // namespace
+
+Driver::Driver(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config,
+               Server::Configuration::TracerFactoryContext& context)
+    : tls_slot_ptr_(context.serverFactoryContext().threadLocal().allocateSlot()),
+      tracing_stats_{OPENTELEMETRY_TRACER_STATS(
+          POOL_COUNTER_PREFIX(context.serverFactoryContext().scope(), "tracing.opentelemetry"))} {
+  auto& factory_context = context.serverFactoryContext();
+
+  // Create the sampler if configured
+  SamplerSharedPtr sampler = tryCreateSamper(opentelemetry_config, context);
 
   // Create the tracer in Thread Local Storage.
   tls_slot_ptr_->set(
