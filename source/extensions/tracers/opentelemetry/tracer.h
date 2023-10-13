@@ -29,8 +29,6 @@ struct OpenTelemetryTracerStats {
   OPENTELEMETRY_TRACER_STATS(GENERATE_COUNTER_STRUCT)
 };
 
-class Span;
-
 /**
  * OpenTelemetry Tracer. It is stored in TLS and contains the exporter.
  */
@@ -58,9 +56,6 @@ private:
    * Removes all spans from the span buffer and sends them to the collector.
    */
   void flushSpans();
-
-  void callSampler(const absl::StatusOr<SpanContext> span_context, Span& new_span,
-                   const std::string& operation_name);
 
   OpenTelemetryGrpcTraceExporterPtr exporter_;
   Envoy::TimeSource& time_source_;
