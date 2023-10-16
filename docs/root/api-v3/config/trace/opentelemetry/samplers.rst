@@ -1,3 +1,6 @@
+OpenTelemetry Samplers
+======================
+
 Samplers that can be configured with the OpenTelemetry Tracer:
 
 .. toctree::
