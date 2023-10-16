@@ -9,7 +9,7 @@
 #include "envoy/server/tracer_config.h"
 #include "envoy/tracing/trace_context.h"
 
-#include "absl/status/statusor.h"
+#include "absl/types/optional.h"
 #include "opentelemetry/proto/trace/v1/trace.pb.h"
 
 namespace Envoy {
@@ -68,7 +68,7 @@ public:
    * @param links Collection of links that will be associated with the Span to be created.
    * @return SamplingResult @see SamplingResult
    */
-  virtual SamplingResult shouldSample(const absl::StatusOr<SpanContext>& parent_context,
+  virtual SamplingResult shouldSample(const absl::optional<SpanContext> parent_context,
                                       const std::string& trace_id, const std::string& name,
                                       ::opentelemetry::proto::trace::v1::Span::SpanKind spankind,
                                       const std::map<std::string, std::string>& attributes,

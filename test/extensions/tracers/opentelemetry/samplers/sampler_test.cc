@@ -26,7 +26,7 @@ using ::testing::StrictMock;
 class TestSampler : public Sampler {
 public:
   MOCK_METHOD(SamplingResult, shouldSample,
-              ((const absl::StatusOr<SpanContext>&), (const std::string&), (const std::string&),
+              ((const absl::optional<SpanContext>), (const std::string&), (const std::string&),
                (::opentelemetry::proto::trace::v1::Span::SpanKind),
                (const std::map<std::string, std::string>&), (const std::vector<SpanContext>&)),
               (override));
@@ -130,7 +130,7 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
 
   // shouldSample returns a result without additonal attributes and Decision::RECORD_AND_SAMPLE
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
-      .WillOnce([](const absl::StatusOr<SpanContext>&, const std::string&, const std::string&,
+      .WillOnce([](const absl::optional<SpanContext>, const std::string&, const std::string&,
                    ::opentelemetry::proto::trace::v1::Span::SpanKind,
                    const std::map<std::string, std::string>&, const std::vector<SpanContext>&) {
         SamplingResult res;
@@ -150,7 +150,7 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
 
   // shouldSamples return a result containing additional attributes and Decision::DROP
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
-      .WillOnce([](const absl::StatusOr<SpanContext>&, const std::string&, const std::string&,
+      .WillOnce([](const absl::optional<SpanContext>, const std::string&, const std::string&,
                    ::opentelemetry::proto::trace::v1::Span::SpanKind,
                    const std::map<std::string, std::string>&, const std::vector<SpanContext>&) {
         SamplingResult res;

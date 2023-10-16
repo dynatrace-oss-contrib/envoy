@@ -21,7 +21,7 @@ TEST(AlwaysOnSamplerTest, TestWithInvalidParentContext) {
   auto sampler = std::make_shared<AlwaysOnSampler>(config, context);
   EXPECT_STREQ(sampler->getDescription().c_str(), "AlwaysOnSampler");
 
-  absl::StatusOr<SpanContext> span_context = absl::InvalidArgumentError("no parent span");
+  absl::optional<SpanContext> span_context;
   auto sampling_result =
       sampler->shouldSample(span_context, "operation_name", "12345",
                             ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
@@ -38,8 +38,7 @@ TEST(AlwaysOnSamplerTest, TestWithValidParentContext) {
   auto sampler = std::make_shared<AlwaysOnSampler>(config, context);
   EXPECT_STREQ(sampler->getDescription().c_str(), "AlwaysOnSampler");
 
-  SpanContext ctx("0", "12345", "45678", false, "some_tracestate");
-  absl::StatusOr<SpanContext> span_context = ctx;
+  SpanContext span_context("0", "12345", "45678", false, "some_tracestate");
   auto sampling_result =
       sampler->shouldSample(span_context, "operation_name", "12345",
                             ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});

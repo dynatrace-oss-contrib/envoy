@@ -26,7 +26,7 @@ using opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest;
 
 namespace {
 
-void callSampler(SamplerSharedPtr sampler, const absl::StatusOr<SpanContext> span_context,
+void callSampler(SamplerSharedPtr sampler, const absl::optional<SpanContext> span_context,
                  Span& new_span, const std::string& operation_name) {
   if (!sampler) {
     return;
@@ -183,8 +183,7 @@ Tracing::SpanPtr Tracer::startSpan(const Tracing::Config& config, const std::str
   new_span.setTraceId(absl::StrCat(Hex::uint64ToHex(trace_id_high), Hex::uint64ToHex(trace_id)));
   uint64_t span_id = random_.random();
   new_span.setId(Hex::uint64ToHex(span_id));
-  absl::StatusOr<SpanContext> span_context = absl::InvalidArgumentError("no parent span");
-  callSampler(sampler_, span_context, new_span, operation_name);
+  callSampler(sampler_, absl::nullopt, new_span, operation_name);
   return std::make_unique<Span>(new_span);
 }
 
