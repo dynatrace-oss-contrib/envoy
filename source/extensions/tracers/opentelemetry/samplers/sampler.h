@@ -58,7 +58,7 @@ public:
   /**
    * @brief Decides if a trace should be sampled.
    *
-   * @param parent_context Span context decsribing the parent span. The Span's SpanContext may be
+   * @param parent_context Span context describing the parent span. The Span's SpanContext may be
    * invalid to indicate a root span.
    * @param trace_id Trace id of the Span to be created. If the parent SpanContext contains a valid
    * TraceId, they MUST always match.

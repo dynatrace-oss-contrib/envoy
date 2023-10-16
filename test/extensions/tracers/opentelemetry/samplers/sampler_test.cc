@@ -128,7 +128,7 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
 
   auto driver = std::make_unique<Driver>(opentelemetry_config, context);
 
-  // shouldSample returns a result without additonal attributes and Decision::RECORD_AND_SAMPLE
+  // shouldSample returns a result without additional attributes and Decision::RECORD_AND_SAMPLE
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
       .WillOnce([](const absl::optional<SpanContext>, const std::string&, const std::string&,
                    ::opentelemetry::proto::trace::v1::Span::SpanKind,
