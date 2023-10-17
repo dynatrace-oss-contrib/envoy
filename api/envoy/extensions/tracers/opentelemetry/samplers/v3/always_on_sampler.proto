@@ -16,7 +16,7 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
 // SDK specification.
 //
 // See:
-// `AlwaysOn specification <https://opentelemetry.io/docs/specs/otel/trace/sdk/#alwayson>`_
+// `AlwaysOn sampler specification <https://opentelemetry.io/docs/specs/otel/trace/sdk/#alwayson>`_
 // [#extension: envoy.tracers.opentelemetry.samplers.always_on]
 
 message AlwaysOnSamplerConfig {

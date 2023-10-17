@@ -12,6 +12,7 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+// Test create sampler via factory
 TEST(AlwaysOnSamplerFactoryTest, Test) {
   auto* factory = Registry::FactoryRegistry<SamplerFactory>::getFactory(
       "envoy.tracers.opentelemetry.samplers.always_on");

@@ -31,9 +31,7 @@ message OpenTelemetryConfig {
   // The configured sampler implements the Sampler interface defined by the OpenTelemetry specification.
   // This field can be left empty. In this case, the default Envoy sampling decision is used.
   //
-  // See: https://opentelemetry.io/docs/specs/otel/trace/sdk/#sampler
-  //
-  // See: https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/observability/tracing#trace-context-propagation
+  // See: `OpenTelemetry sampler specification <https://opentelemetry.io/docs/specs/otel/trace/sdk/#sampler>`_
   // [#extension-category: envoy.tracers.opentelemetry.samplers]
   core.v3.TypedExtensionConfig sampler = 3;
 }

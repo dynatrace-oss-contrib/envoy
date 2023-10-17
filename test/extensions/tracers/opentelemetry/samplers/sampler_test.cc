@@ -55,6 +55,7 @@ protected:
   NiceMock<Server::Configuration::MockTracerFactoryContext> context;
 };
 
+// Test OTLP tracer without a sampler
 TEST_F(SamplerFactoryTest, TestWithoutSampler) {
   // using StrictMock, calls to SamplerFactory would cause a test failure
   auto test_sampler = std::make_shared<StrictMock<TestSampler>>();
@@ -79,6 +80,7 @@ TEST_F(SamplerFactoryTest, TestWithoutSampler) {
                     {Tracing::Reason::Sampling, true});
 }
 
+// Test config containing an unknown sampler
 TEST_F(SamplerFactoryTest, TestWithInvalidSampler) {
   // using StrictMock, calls to SamplerFactory would cause a test failure
   auto test_sampler = std::make_shared<StrictMock<TestSampler>>();
@@ -104,6 +106,7 @@ TEST_F(SamplerFactoryTest, TestWithInvalidSampler) {
   EXPECT_THROW(std::make_unique<Driver>(opentelemetry_config, context), EnvoyException);
 }
 
+// Test OTLP tracer with a sampler
 TEST_F(SamplerFactoryTest, TestWithSampler) {
   auto test_sampler = std::make_shared<NiceMock<TestSampler>>();
   TestSamplerFactory sampler_factory;
@@ -170,6 +173,7 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
   EXPECT_STREQ(unsampled_span->tracestate().c_str(), "this_is=another_tracesate");
 }
 
+// Test sampling result decision
 TEST(SamplingResultTest, TestSamplingResult) {
   SamplingResult result;
   result.decision = Decision::RECORD_AND_SAMPLE;

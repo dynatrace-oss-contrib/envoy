@@ -15,15 +15,15 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+// Verify sampler being invoked with an invalid span context
 TEST(AlwaysOnSamplerTest, TestWithInvalidParentContext) {
   envoy::extensions::tracers::opentelemetry::samplers::v3::AlwaysOnSamplerConfig config;
   NiceMock<Server::Configuration::MockTracerFactoryContext> context;
   auto sampler = std::make_shared<AlwaysOnSampler>(config, context);
   EXPECT_STREQ(sampler->getDescription().c_str(), "AlwaysOnSampler");
 
-  absl::optional<SpanContext> span_context;
   auto sampling_result =
-      sampler->shouldSample(span_context, "operation_name", "12345",
+      sampler->shouldSample(absl::nullopt, "operation_name", "12345",
                             ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::RECORD_AND_SAMPLE);
   EXPECT_EQ(sampling_result.attributes, nullptr);
@@ -32,6 +32,7 @@ TEST(AlwaysOnSamplerTest, TestWithInvalidParentContext) {
   EXPECT_TRUE(sampling_result.isSampled());
 }
 
+// Verify sampler being invoked with a valid span context
 TEST(AlwaysOnSamplerTest, TestWithValidParentContext) {
   envoy::extensions::tracers::opentelemetry::samplers::v3::AlwaysOnSamplerConfig config;
   NiceMock<Server::Configuration::MockTracerFactoryContext> context;
