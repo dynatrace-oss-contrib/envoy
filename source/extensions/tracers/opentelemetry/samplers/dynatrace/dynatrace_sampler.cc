@@ -39,7 +39,7 @@ DynatraceSampler::shouldSample(const absl::StatusOr<SpanContext>& parent_context
   SamplingResult result;
   std::map<std::string, std::string> att;
   // uint32_t current_counter = counter_++;
-  DynatraceTracestate tracestate;
+  DynatraceTracestate tracestate(tenant_id_, cluster_id_);
 
   if (parent_context.ok()) { // there is already a trace,
     // TODO: we should check if there is a dynatrace sampling decision on the state and use it
