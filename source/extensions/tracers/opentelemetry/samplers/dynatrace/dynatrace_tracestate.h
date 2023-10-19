@@ -59,11 +59,8 @@ private:
 // <tenantID>-<clusterID>@dt=fw4;0;0;0;0;<isIgnored>;<sampling_exponent>;<rootPathRandom>
 class DynatraceTracestate {
 public:
-  DynatraceTracestate() = default;
-
-  DynatraceTracestate(const std::string& tenant_id, const std::string& cluster_id)
-      : tenant_id_(tenant_id), cluster_id_(cluster_id) {
-    key_ = absl::StrCat(absl::string_view(tenant_id_), "-", absl::string_view(cluster_id), "@dt");
+  DynatraceTracestate(const std::string& tenant_id, const std::string& cluster_id) {
+    key_ = absl::StrCat(absl::string_view(tenant_id), "-", absl::string_view(cluster_id), "@dt");
   }
 
   std::string getKey() const { return key_; };
@@ -71,8 +68,6 @@ public:
   bool keyMatches(const std::string& key) { return (key_.compare(key) == 0); }
 
 private:
-  std::string tenant_id_;
-  std::string cluster_id_;
   std::string key_;
 };
 } // namespace OpenTelemetry
