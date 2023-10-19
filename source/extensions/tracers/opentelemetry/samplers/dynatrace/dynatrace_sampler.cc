@@ -18,16 +18,6 @@ namespace OpenTelemetry {
 static const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME =
     "sampling_extrapolation_set_in_sampler";
 
-DynatraceTracestate DynatraceSampler::createTracestate(bool is_recording,
-                                                       std::string sampling_exponent) {
-  DynatraceTracestate tracestate;
-  tracestate.sampling_exponent = sampling_exponent;
-  tracestate.tenant_id = tenant_id_;
-  tracestate.cluster_id = cluster_id_;
-  tracestate.is_ignored = is_recording ? "0" : "1";
-  return tracestate;
-}
-
 FW4Tag DynatraceSampler::getFW4Tag(const Tracestate& tracestate) {
   for (auto const& entry : tracestate.entries()) {
     if (dynatrace_tracestate_.keyMatches(
@@ -55,20 +45,19 @@ DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
 
   if (fw4_tag.isValid()) { // we found a trace decision in tracestate header
     result.decision = fw4_tag.isIgnored() ? Decision::DROP : Decision::RECORD_AND_SAMPLE;
-    att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = fw4_tag.getSamplingExponent();
+    att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(fw4_tag.getSamplingExponent());
     result.tracestate = parent_context->tracestate();
 
   } else {                     // make a sampling decision
     bool sample = true;        // TODO
     int sampling_exponent = 8; // TODO
-    att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = sampling_exponent;
+    att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(sampling_exponent);
 
     result.decision = sample ? Decision::RECORD_AND_SAMPLE : Decision::DROP;
 
     FW4Tag new_tag = FW4Tag::create(!sample, sampling_exponent);
     tracestate.add(dynatrace_tracestate_.getKey(), new_tag.createValue());
     result.tracestate = tracestate.asString();
-    att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = sampling_exponent;
   }
 
   if (!att.empty()) {
