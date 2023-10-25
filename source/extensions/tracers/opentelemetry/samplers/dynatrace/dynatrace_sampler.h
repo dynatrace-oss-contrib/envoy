@@ -20,7 +20,8 @@ namespace OpenTelemetry {
 class DynatraceSampler : public Sampler, Logger::Loggable<Logger::Id::tracing> {
 public:
   explicit DynatraceSampler(
-      const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config)
+      const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config,
+      Server::Configuration::TracerFactoryContext& /*context*/)
       : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
         dynatrace_tracestate_(tenant_id_, cluster_id_) {}
 

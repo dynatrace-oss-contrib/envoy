@@ -20,7 +20,8 @@ DynatraceSamplerFactory::createSampler(const Protobuf::Message& config,
   return std::make_shared<DynatraceSampler>(
       MessageUtil::downcastAndValidate<
           const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig&>(
-          *mptr, context.messageValidationVisitor()));
+          *mptr, context.messageValidationVisitor()),
+      context);
 }
 
 /**
