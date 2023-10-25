@@ -37,3 +37,17 @@ envoy_extension_cc_test(
         "//test/test_common:utility_lib",
     ],
 )
+
+envoy_extension_cc_test(
+    name = "dynatrace_sampler_integration_test",
+    srcs = [
+        "dynatrace_sampler_integration_test.cc",
+    ],
+    extension_names = ["envoy.tracers.opentelemetry.samplers.dynatrace"],
+    deps = [
+        "//source/exe:main_common_lib",
+        "//test/integration:http_integration_lib",
+        "//test/test_common:utility_lib",
+        "@envoy_api//envoy/extensions/filters/network/http_connection_manager/v3:pkg_cc_proto",
+    ],
+)
