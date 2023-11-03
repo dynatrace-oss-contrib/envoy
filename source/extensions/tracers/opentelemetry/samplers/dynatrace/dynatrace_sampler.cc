@@ -50,7 +50,7 @@ DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
 
   } else {                     // make a sampling decision
     bool sample = true;        // TODO
-    int sampling_exponent = 8; // TODO
+    int sampling_exponent = 0; // TODO
     att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(sampling_exponent);
 
     result.decision = sample ? Decision::RECORD_AND_SAMPLE : Decision::DROP;
