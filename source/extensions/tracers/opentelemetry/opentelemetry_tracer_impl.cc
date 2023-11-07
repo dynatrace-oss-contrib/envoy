@@ -44,6 +44,20 @@ tryCreateSamper(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemet
   return sampler;
 }
 
+OTelSpanAttributes getInitialAttributes(const Tracing::TraceContext& trace_context) {
+  OTelSpanAttributes attributes;
+  std::vector<absl::string_view> address_port = absl::StrSplit(trace_context.host(), ":");
+  attributes["server.address"] = address_port.size() > 0 ? address_port[0] : "";
+  attributes["server.port"] = address_port.size() > 1 ? address_port[1] : "";
+  std::vector<absl::string_view> path_query = absl::StrSplit(trace_context.path(), "?");
+  attributes["url.path"] = path_query.size() > 0 ? path_query[0] : "";
+  attributes["url.query"] = path_query.size() > 1 ? path_query[1] : "";
+  auto scheme = trace_context.getByKey(":scheme");
+  attributes["url.scheme"] = scheme.has_value() ? scheme.value() : "";
+  attributes["http.request.method"] = trace_context.method();
+  return attributes;
+}
+
 } // namespace
 
 Driver::Driver(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config,
@@ -97,34 +111,11 @@ Tracing::SpanPtr Driver::startSpan(const Tracing::Config& config,
                                    const StreamInfo::StreamInfo& stream_info,
                                    const std::string& operation_name,
                                    Tracing::Decision tracing_decision) {
+
   // Get tracer from TLS and start span.
-  auto protocol = trace_context.protocol();
-  auto host = trace_context.host();
-  auto path = trace_context.path();
-  auto method = trace_context.method();
-  ENVOY_LOG(info, "host: '{}' path: '{}' method: '{}' protocol: '{}'", std::string{host},
-            std::string{path}, std::string{method}, std::string{protocol});
-
-  trace_context.forEach([](absl::string_view key, absl::string_view value) {
-    ENVOY_LOG(info, "headers: '{}' '{}'", std::string{key}, std::string{value});
-    return true;
-  });
-
-  auto request_header_map = dynamic_cast<Http::RequestHeaderMap*>(&trace_context);
-  ASSERT(request_header_map != nullptr);
-  auto utl = Http::Utility::buildOriginalUri(*request_header_map, config.maxPathTagLength());
-  ENVOY_LOG(info, "original uri: {}", utl);
-
-  // https://opentelemetry.io/docs/specs/semconv/http/http-spans/
-  OTelSpanAttributes initial_attributes;
-  initial_attributes["http.X.Y"] = utl;
-  initial_attributes["http.request.method"] = trace_context.method();
-  initial_attributes["url.path"] =
-      trace_context.path(); // TODO: trace_context.path() contains also "query", should be splitted
-                            // by `?` character
-
   auto& tracer = tls_slot_ptr_->getTyped<Driver::TlsTracer>().tracer();
   SpanContextExtractor extractor(trace_context);
+  auto initial_attributes = getInitialAttributes(trace_context);
   if (!extractor.propagationHeaderPresent()) {
     // No propagation header, so we can create a fresh span with the given decision.
     Tracing::SpanPtr new_open_telemetry_span = tracer.startSpan(
