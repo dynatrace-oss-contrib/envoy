@@ -29,11 +29,16 @@ enum class Decision {
   RECORD_AND_SAMPLE
 };
 
+/**
+ * @brief A string key-value map that stores the span attributes.
+ */
+using OTelSpanAttributes = std::map<std::string, std::string>;
+
 struct SamplingResult {
   /// @see Decision
   Decision decision;
   // A set of span Attributes that will also be added to the Span. Can be nullptr.
-  std::unique_ptr<const std::map<std::string, std::string>> attributes;
+  std::unique_ptr<const OTelSpanAttributes> attributes;
   // A Tracestate that will be associated with the Span. If the sampler
   // returns an empty Tracestate here, the Tracestate will be cleared, so samplers SHOULD normally
   // return the passed-in Tracestate if they do not intend to change it
@@ -71,7 +76,7 @@ public:
   virtual SamplingResult shouldSample(const absl::optional<SpanContext> parent_context,
                                       const std::string& trace_id, const std::string& name,
                                       ::opentelemetry::proto::trace::v1::Span::SpanKind spankind,
-                                      const std::map<std::string, std::string>& attributes,
+                                      const OTelSpanAttributes& attributes,
                                       const std::vector<SpanContext>& links) PURE;
 
   /**

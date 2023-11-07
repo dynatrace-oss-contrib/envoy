@@ -43,12 +43,12 @@ public:
   void sendSpan(::opentelemetry::proto::trace::v1::Span& span);
 
   Tracing::SpanPtr startSpan(const Tracing::Config& config, const std::string& operation_name,
-                             SystemTime start_time, Tracing::Decision tracing_decision,
-                             bool downstream_span = true);
+                             SystemTime start_time, const OTelSpanAttributes& initial_attributes,
+                             Tracing::Decision tracing_decision, bool downstream_span = true);
 
   Tracing::SpanPtr startSpan(const Tracing::Config& config, const std::string& operation_name,
-                             SystemTime start_time, const SpanContext& previous_span_context,
-                             bool downstream_span = true);
+                             SystemTime start_time, const OTelSpanAttributes& initial_attributes,
+                             const SpanContext& previous_span_context, bool downstream_span = true);
 
 private:
   /**

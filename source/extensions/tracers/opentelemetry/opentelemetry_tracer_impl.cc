@@ -7,6 +7,7 @@
 #include "source/common/common/empty_string.h"
 #include "source/common/common/logger.h"
 #include "source/common/config/utility.h"
+#include "source/common/http/utility.h"
 #include "source/common/tracing/http_tracer_impl.h"
 #include "source/extensions/tracers/opentelemetry/grpc_trace_exporter.h"
 #include "source/extensions/tracers/opentelemetry/http_trace_exporter.h"
@@ -97,18 +98,43 @@ Tracing::SpanPtr Driver::startSpan(const Tracing::Config& config,
                                    const std::string& operation_name,
                                    Tracing::Decision tracing_decision) {
   // Get tracer from TLS and start span.
+  auto protocol = trace_context.protocol();
+  auto host = trace_context.host();
+  auto path = trace_context.path();
+  auto method = trace_context.method();
+  ENVOY_LOG(info, "host: '{}' path: '{}' method: '{}' protocol: '{}'", std::string{host},
+            std::string{path}, std::string{method}, std::string{protocol});
+
+  trace_context.forEach([](absl::string_view key, absl::string_view value) {
+    ENVOY_LOG(info, "headers: '{}' '{}'", std::string{key}, std::string{value});
+    return true;
+  });
+
+  auto request_header_map = dynamic_cast<Http::RequestHeaderMap*>(&trace_context);
+  ASSERT(request_header_map != nullptr);
+  auto utl = Http::Utility::buildOriginalUri(*request_header_map, config.maxPathTagLength());
+  ENVOY_LOG(info, "original uri: {}", utl);
+
+  // https://opentelemetry.io/docs/specs/semconv/http/http-spans/
+  OTelSpanAttributes initial_attributes;
+  initial_attributes["http.X.Y"] = utl;
+  initial_attributes["http.request.method"] = trace_context.method();
+  initial_attributes["url.path"] =
+      trace_context.path(); // TODO: trace_context.path() contains also "query", should be splitted
+                            // by `?` character
+
   auto& tracer = tls_slot_ptr_->getTyped<Driver::TlsTracer>().tracer();
   SpanContextExtractor extractor(trace_context);
   if (!extractor.propagationHeaderPresent()) {
     // No propagation header, so we can create a fresh span with the given decision.
-    Tracing::SpanPtr new_open_telemetry_span =
-        tracer.startSpan(config, operation_name, stream_info.startTime(), tracing_decision);
+    Tracing::SpanPtr new_open_telemetry_span = tracer.startSpan(
+        config, operation_name, stream_info.startTime(), initial_attributes, tracing_decision);
     return new_open_telemetry_span;
   } else {
     // Try to extract the span context. If we can't, just return a null span.
     absl::StatusOr<SpanContext> span_context = extractor.extractSpanContext();
     if (span_context.ok()) {
-      return tracer.startSpan(config, operation_name, stream_info.startTime(),
+      return tracer.startSpan(config, operation_name, stream_info.startTime(), initial_attributes,
                               span_context.value());
     } else {
       ENVOY_LOG(trace, "Unable to extract span context: ", span_context.status());

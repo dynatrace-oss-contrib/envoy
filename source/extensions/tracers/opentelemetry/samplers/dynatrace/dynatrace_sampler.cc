@@ -32,12 +32,14 @@ SamplingResult
 DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                const std::string& /*trace_id*/, const std::string& /*name*/,
                                ::opentelemetry::proto::trace::v1::Span::SpanKind /*kind*/,
-                               const std::map<std::string, std::string>& /*attributes*/,
+                               const std::map<std::string, std::string>& attributes,
                                const std::vector<SpanContext>& /*links*/) {
 
   SamplingResult result;
   std::map<std::string, std::string> att;
-
+  if (attributes.size() > 10) {
+    return {};
+  }
   Tracestate tracestate;
   tracestate.parse(parent_context.has_value() ? parent_context->tracestate() : "");
 
