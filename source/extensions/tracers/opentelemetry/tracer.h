@@ -42,13 +42,13 @@ public:
 
   void sendSpan(::opentelemetry::proto::trace::v1::Span& span);
 
-  Tracing::SpanPtr startSpan(const Tracing::Config& config, const std::string& operation_name,
-                             SystemTime start_time, Tracing::Decision tracing_decision,
-                             bool downstream_span = true);
+  Tracing::SpanPtr startSpan(const std::string& operation_name, SystemTime start_time,
+                             const OTelSpanAttributes& initial_attributes,
+                             Tracing::Decision tracing_decision, OTelSpanKind span_kind);
 
-  Tracing::SpanPtr startSpan(const Tracing::Config& config, const std::string& operation_name,
-                             SystemTime start_time, const SpanContext& previous_span_context,
-                             bool downstream_span = true);
+  Tracing::SpanPtr startSpan(const std::string& operation_name, SystemTime start_time,
+                             const OTelSpanAttributes& initial_attributes,
+                             const SpanContext& previous_span_context, OTelSpanKind span_kind);
 
 private:
   /**
@@ -77,8 +77,8 @@ private:
  */
 class Span : Logger::Loggable<Logger::Id::tracing>, public Tracing::Span {
 public:
-  Span(const Tracing::Config& config, const std::string& name, SystemTime start_time,
-       Envoy::TimeSource& time_source, Tracer& parent_tracer, bool downstream_span);
+  Span(const std::string& name, SystemTime start_time, Envoy::TimeSource& time_source,
+       Tracer& parent_tracer, OTelSpanKind span_kind);
 
   // Tracing::Span functions
   void setOperation(absl::string_view /*operation*/) override{};
@@ -115,7 +115,7 @@ public:
 
   std::string getTraceIdAsHex() const override { return absl::BytesToHexString(span_.trace_id()); };
 
-  ::opentelemetry::proto::trace::v1::Span::SpanKind spankind() const { return span_.kind(); }
+  OTelSpanKind spankind() const { return span_.kind(); }
 
   /**
    * Sets the span's id.
