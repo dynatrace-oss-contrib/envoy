@@ -28,12 +28,11 @@ FW4Tag DynatraceSampler::getFW4Tag(const Tracestate& tracestate) {
   return FW4Tag::createInvalid();
 }
 
-SamplingResult
-DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
-                               const std::string& /*trace_id*/, const std::string& /*name*/,
-                               ::opentelemetry::proto::trace::v1::Span::SpanKind /*kind*/,
-                               const std::map<std::string, std::string>& attributes,
-                               const std::vector<SpanContext>& /*links*/) {
+SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
+                                              const std::string& /*trace_id*/,
+                                              const std::string& /*name*/, OtelSpanKind /*kind*/,
+                                              const std::map<std::string, std::string>& attributes,
+                                              const std::vector<SpanContext>& /*links*/) {
 
   SamplingResult result;
   std::map<std::string, std::string> att;

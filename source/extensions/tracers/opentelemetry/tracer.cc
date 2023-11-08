@@ -53,40 +53,23 @@ void setInitialAttributes(Span& new_span, const OTelSpanAttributes& initial_attr
 
 } // namespace
 
-Span::Span(const Tracing::Config& config, const std::string& name, SystemTime start_time,
-           Envoy::TimeSource& time_source, Tracer& parent_tracer, bool downstream_span)
+Span::Span(const std::string& name, SystemTime start_time, Envoy::TimeSource& time_source,
+           Tracer& parent_tracer, OtelSpanKind span_kind)
     : parent_tracer_(parent_tracer), time_source_(time_source) {
   span_ = ::opentelemetry::proto::trace::v1::Span();
 
-  if (downstream_span) {
-    // If this is downstream span that be created by 'startSpan' for downstream request, then
-    // set the span type based on the spawnUpstreamSpan flag and traffic direction:
-    // * If separate tracing span will be created for upstream request, then set span type to
-    //   SERVER because the downstream span should be server span in trace chain.
-    // * If separate tracing span will not be created for upstream request, that means the
-    //   Envoy will not be treated as independent hop in trace chain and then set span type
-    //   based on the traffic direction.
-    span_.set_kind(config.spawnUpstreamSpan()
-                       ? ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER
-                   : config.operationName() == Tracing::OperationName::Egress
-                       ? ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_CLIENT
-                       : ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER);
-  } else {
-    // If this is an non-downstream span that be created for upstream request or async HTTP/gRPC
-    // request, then set the span type to client always.
-    span_.set_kind(::opentelemetry::proto::trace::v1::Span::SPAN_KIND_CLIENT);
-  }
+  span_.set_kind(span_kind);
 
   span_.set_name(name);
   span_.set_start_time_unix_nano(std::chrono::nanoseconds(start_time.time_since_epoch()).count());
 }
 
-Tracing::SpanPtr Span::spawnChild(const Tracing::Config& config, const std::string& name,
+Tracing::SpanPtr Span::spawnChild(const Tracing::Config&, const std::string& name,
                                   SystemTime start_time) {
   // Build span_context from the current span, then generate the child span from that context.
   SpanContext span_context(kDefaultVersion, getTraceIdAsHex(), spanId(), sampled(), tracestate());
-  return parent_tracer_.startSpan(config, name, start_time, {}, span_context,
-                                  /*downstream_span*/ false);
+  return parent_tracer_.startSpan(name, start_time, {}, span_context,
+                                  ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_CLIENT);
 }
 
 void Span::finishSpan() {
@@ -199,12 +182,11 @@ void Tracer::sendSpan(::opentelemetry::proto::trace::v1::Span& span) {
   }
 }
 
-Tracing::SpanPtr Tracer::startSpan(const Tracing::Config& config, const std::string& operation_name,
-                                   SystemTime start_time,
+Tracing::SpanPtr Tracer::startSpan(const std::string& operation_name, SystemTime start_time,
                                    const OTelSpanAttributes& initial_attributes,
-                                   Tracing::Decision tracing_decision, bool downstream_span) {
+                                   Tracing::Decision tracing_decision, OtelSpanKind span_kind) {
   // Create an Tracers::OpenTelemetry::Span class that will contain the OTel span.
-  Span new_span(config, operation_name, start_time, time_source_, *this, downstream_span);
+  Span new_span(operation_name, start_time, time_source_, *this, span_kind);
   uint64_t trace_id_high = random_.random();
   uint64_t trace_id = random_.random();
   new_span.setTraceId(absl::StrCat(Hex::uint64ToHex(trace_id_high), Hex::uint64ToHex(trace_id)));
@@ -219,12 +201,12 @@ Tracing::SpanPtr Tracer::startSpan(const Tracing::Config& config, const std::str
   return std::make_unique<Span>(new_span);
 }
 
-Tracing::SpanPtr Tracer::startSpan(const Tracing::Config& config, const std::string& operation_name,
-                                   SystemTime start_time,
+Tracing::SpanPtr Tracer::startSpan(const std::string& operation_name, SystemTime start_time,
                                    const OTelSpanAttributes& initial_attributes,
-                                   const SpanContext& previous_span_context, bool downstream_span) {
+                                   const SpanContext& previous_span_context,
+                                   OtelSpanKind span_kind) {
   // Create a new span and populate details from the span context.
-  Span new_span(config, operation_name, start_time, time_source_, *this, downstream_span);
+  Span new_span(operation_name, start_time, time_source_, *this, span_kind);
   new_span.setTraceId(previous_span_context.traceId());
   if (!previous_span_context.parentId().empty()) {
     new_span.setParentId(previous_span_context.parentId());

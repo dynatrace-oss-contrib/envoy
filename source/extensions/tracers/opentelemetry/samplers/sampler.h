@@ -34,6 +34,11 @@ enum class Decision {
  */
 using OTelSpanAttributes = std::map<std::string, std::string>;
 
+/**
+ * @brief The type of the span.
+ */
+using OtelSpanKind = ::opentelemetry::proto::trace::v1::Span::SpanKind;
+
 struct SamplingResult {
   /// @see Decision
   Decision decision;
@@ -75,8 +80,7 @@ public:
    */
   virtual SamplingResult shouldSample(const absl::optional<SpanContext> parent_context,
                                       const std::string& trace_id, const std::string& name,
-                                      ::opentelemetry::proto::trace::v1::Span::SpanKind spankind,
-                                      const OTelSpanAttributes& attributes,
+                                      OtelSpanKind spankind, const OTelSpanAttributes& attributes,
                                       const std::vector<SpanContext>& links) PURE;
 
   /**

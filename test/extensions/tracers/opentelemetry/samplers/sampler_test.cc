@@ -27,8 +27,8 @@ class TestSampler : public Sampler {
 public:
   MOCK_METHOD(SamplingResult, shouldSample,
               ((const absl::optional<SpanContext>), (const std::string&), (const std::string&),
-               (::opentelemetry::proto::trace::v1::Span::SpanKind),
-               (const std::map<std::string, std::string>&), (const std::vector<SpanContext>&)),
+               (OtelSpanKind), (const std::map<std::string, std::string>&),
+               (const std::vector<SpanContext>&)),
               (override));
   MOCK_METHOD(std::string, getDescription, (), (const, override));
 };
@@ -134,8 +134,8 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
   // shouldSample returns a result without additional attributes and Decision::RECORD_AND_SAMPLE
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
       .WillOnce([](const absl::optional<SpanContext>, const std::string&, const std::string&,
-                   ::opentelemetry::proto::trace::v1::Span::SpanKind,
-                   const std::map<std::string, std::string>&, const std::vector<SpanContext>&) {
+                   OtelSpanKind, const std::map<std::string, std::string>&,
+                   const std::vector<SpanContext>&) {
         SamplingResult res;
         res.decision = Decision::RECORD_AND_SAMPLE;
         res.tracestate = "this_is=tracesate";
@@ -154,8 +154,8 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
   // shouldSamples return a result containing additional attributes and Decision::DROP
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
       .WillOnce([](const absl::optional<SpanContext>, const std::string&, const std::string&,
-                   ::opentelemetry::proto::trace::v1::Span::SpanKind,
-                   const std::map<std::string, std::string>&, const std::vector<SpanContext>&) {
+                   OtelSpanKind, const std::map<std::string, std::string>&,
+                   const std::vector<SpanContext>&) {
         SamplingResult res;
         res.decision = Decision::DROP;
         std::map<std::string, std::string> attributes;
