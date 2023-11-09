@@ -23,10 +23,10 @@ namespace OpenTelemetry {
 
 class MockDynatraceFileReader : public DynatraceMetadataFileReader {
 public:
-  MOCK_METHOD(const std::string, readEnrichmentFile, (const std::string& file_path));
+  MOCK_METHOD(std::string, readEnrichmentFile, (const std::string& file_path));
 };
 
-TEST(DynatraceResourceDetectorTest, OneAgentAndOperatorNotInstalled) {
+TEST(DynatraceResourceDetectorTest, DynatraceNotDeployed) {
   NiceMock<Server::Configuration::MockTracerFactoryContext> context;
 
   auto dt_file_reader = std::make_unique<NiceMock<MockDynatraceFileReader>>();
@@ -36,11 +36,10 @@ TEST(DynatraceResourceDetectorTest, OneAgentAndOperatorNotInstalled) {
       config;
 
   auto detector = std::make_shared<DynatraceResourceDetector>(config, std::move(dt_file_reader));
+  Resource resource = detector->detect();
 
-  EXPECT_THROW_WITH_MESSAGE(
-      detector->detect(), EnvoyException,
-      "Dynatrace OpenTelemetry resource detector is configured but failed to find the enrichment "
-      "files. Make sure Dynatrace OneAgent or the k8s operator is installed");
+  EXPECT_EQ(resource.schemaUrl_, "");
+  EXPECT_EQ(0, resource.attributes_.size());
 }
 
 TEST(DynatraceResourceDetectorTest, OnlyOneAgentInstalled) {

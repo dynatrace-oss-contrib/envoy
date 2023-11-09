@@ -40,8 +40,7 @@ const std::string readFile(const std::string& file_name) {
 
 } // namespace
 
-const std::string
-DynatraceMetadataFileReaderImpl::readEnrichmentFile(const std::string& file_name) {
+std::string DynatraceMetadataFileReaderImpl::readEnrichmentFile(const std::string& file_name) {
   bool indirectionFile = isIndirectionFile(file_name);
   if (indirectionFile) {
     std::string indirection_file = readFile(file_name);

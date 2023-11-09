@@ -2,10 +2,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <string>
-#include <vector>
-
-#include "source/common/config/datasource.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -13,8 +9,8 @@ namespace Tracers {
 namespace OpenTelemetry {
 namespace {
 
-void addAttributes(std::string content, Resource& resource) {
-  for (const auto& line : StringUtil::splitToken(content, "\n")) {
+void addAttributes(const std::string& content, Resource& resource) {
+  for (const auto& line : StringUtil::splitToken(content, "\n", false, true)) {
     const auto keyValue = StringUtil::splitToken(line, "=");
     if (keyValue.size() != 2) {
       continue;
@@ -29,33 +25,25 @@ void addAttributes(std::string content, Resource& resource) {
 } // namespace
 
 Resource DynatraceResourceDetector::detect() {
-  envoy::config::core::v3::DataSource ds;
-
   Resource resource;
   resource.schemaUrl_ = "";
   int failureCount = 0;
 
   for (const auto& file_name : DT_METADATA_FILES) {
-    ds.clear_filename();
-    ds.set_filename(file_name);
-
     TRY_NEEDS_AUDIT {
-      std::string content = dynatrace_file_reader_->readEnrichmentFile(file_name);
+      std::string content = dynatrace_file_reader_->readEnrichmentFile(std::string(file_name));
       if (content.empty()) {
         failureCount++;
       } else {
         addAttributes(content, resource);
       }
     }
-    END_TRY catch (const EnvoyException& e) { failureCount++; }
+    END_TRY catch (const EnvoyException&) { failureCount++; }
   }
 
-  // Tried all enrichment files and none were either found or worked
-  // This means either the Dynatrace OneAgent or the Operator are not installed/deployed.
-  if (failureCount == DT_METADATA_FILES.size()) {
-    throw EnvoyException(
-        "Dynatrace OpenTelemetry resource detector is configured but failed to find the enrichment "
-        "files. Make sure Dynatrace OneAgent or the k8s operator is installed");
+  if (failureCount > 0) {
+    ENVOY_LOG(warn, "Dynatrace OpenTelemetry resource detector is configured but could not detect attributes. "
+        "Check the Dynatrace deployment status to ensure it is correctly deployed.");
   }
 
   return resource;

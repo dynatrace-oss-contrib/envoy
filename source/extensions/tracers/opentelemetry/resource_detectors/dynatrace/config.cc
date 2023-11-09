@@ -1,4 +1,4 @@
-#include "config.h"
+#include "source/extensions/tracers/opentelemetry/resource_detectors/dynatrace/config.h"
 
 #include "envoy/extensions/tracers/opentelemetry/resource_detectors/v3/dynatrace_resource_detector.pb.h"
 #include "envoy/extensions/tracers/opentelemetry/resource_detectors/v3/dynatrace_resource_detector.pb.validate.h"

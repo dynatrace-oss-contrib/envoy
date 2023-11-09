@@ -15,13 +15,9 @@ namespace OpenTelemetry {
 
 /**
  * @brief A file reader that reads the content of the Dynatrace metadata enrichment files.
- * The Dynatrace enrichment file is a "virtual" file, meaning it does not physically exists on disk.
- * When the Dynatrace OneAgent is deployed on the host, file read calls are intercepted by the
- * OneAgent, which then mimics the existence of the enrichment files. This allow obtaining not only
- * host, but also process related information.
- *
- * Because of the virtual file, using the file reader in Envoy will not work, since it validates the
- * existence of the file.
+ * When OneAgent is monitoring your application, it provides access to the enrichment files.
+ * These files do not physically exists in your file system, but are provided by the OneAgent on demand.
+ * This allows obtaining not only information about the host, but also about process.
  *
  * @see
  * https://docs.dynatrace.com/docs/shortlink/enrichment-files#oneagent-virtual-files
@@ -37,14 +33,14 @@ public:
    * @param file_name The file name.
    * @return const std::string String (java-like properties) containing the enrichment metadata.
    */
-  virtual const std::string readEnrichmentFile(const std::string& file_name) PURE;
+  virtual std::string readEnrichmentFile(const std::string& file_name) PURE;
 };
 
 using DynatraceMetadataFileReaderPtr = std::unique_ptr<DynatraceMetadataFileReader>;
 
 class DynatraceMetadataFileReaderImpl : public DynatraceMetadataFileReader {
 public:
-  const std::string readEnrichmentFile(const std::string& file_name) override;
+  std::string readEnrichmentFile(const std::string& file_name) override;
 };
 
 } // namespace OpenTelemetry

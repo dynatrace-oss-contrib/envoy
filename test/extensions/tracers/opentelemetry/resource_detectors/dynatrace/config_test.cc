@@ -27,6 +27,7 @@ TEST(DynatraceResourceDetectorFactoryTest, Basic) {
 
   NiceMock<Server::Configuration::MockTracerFactoryContext> context;
   EXPECT_NE(factory->createResourceDetector(typed_config.typed_config(), context), nullptr);
+  EXPECT_STREQ(factory->name().c_str(), "envoy.tracers.opentelemetry.resource_detectors.dynatrace");
 }
 
 } // namespace OpenTelemetry

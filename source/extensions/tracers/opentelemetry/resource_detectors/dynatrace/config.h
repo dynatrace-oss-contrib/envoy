@@ -19,6 +19,9 @@ public:
   /**
    * @brief Creates a Resource Detector that reads from the Dynatrace enrichment files.
    *
+   * @see
+   * https://docs.dynatrace.com/docs/shortlink/enrichment-files#oneagent-virtual-files
+   *
    * @param message The resource detector configuration.
    * @param context The tracer factory context.
    * @return ResourceDetectorPtr
