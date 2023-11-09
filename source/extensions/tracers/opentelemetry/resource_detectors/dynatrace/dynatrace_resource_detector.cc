@@ -42,7 +42,9 @@ Resource DynatraceResourceDetector::detect() {
   }
 
   if (failureCount > 0) {
-    ENVOY_LOG(warn, "Dynatrace OpenTelemetry resource detector is configured but could not detect attributes. "
+    ENVOY_LOG(
+        warn,
+        "Dynatrace OpenTelemetry resource detector is configured but could not detect attributes. "
         "Check the Dynatrace deployment status to ensure it is correctly deployed.");
   }
 

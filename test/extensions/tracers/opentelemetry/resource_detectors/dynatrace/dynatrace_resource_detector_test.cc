@@ -98,7 +98,7 @@ k8s.pod.uid=123
 k8s.pod.name=envoy
 )EOF");
 
-    EXPECT_CALL(*dt_file_reader,
+  EXPECT_CALL(*dt_file_reader,
               readEnrichmentFile("dt_metadata_e617c525669e072eebe3d0f08212e8f2.properties"))
       .WillRepeatedly(Return(""));
   EXPECT_CALL(*dt_file_reader,

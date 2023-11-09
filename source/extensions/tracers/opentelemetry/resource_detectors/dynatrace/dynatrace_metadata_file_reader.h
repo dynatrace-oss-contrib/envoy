@@ -16,8 +16,8 @@ namespace OpenTelemetry {
 /**
  * @brief A file reader that reads the content of the Dynatrace metadata enrichment files.
  * When OneAgent is monitoring your application, it provides access to the enrichment files.
- * These files do not physically exists in your file system, but are provided by the OneAgent on demand.
- * This allows obtaining not only information about the host, but also about process.
+ * These files do not physically exists in your file system, but are provided by the OneAgent on
+ * demand. This allows obtaining not only information about the host, but also about process.
  *
  * @see
  * https://docs.dynatrace.com/docs/shortlink/enrichment-files#oneagent-virtual-files
