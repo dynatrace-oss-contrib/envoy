@@ -30,7 +30,7 @@ constexpr std::array<const char*, 3> DT_METADATA_FILES = {
  * the Dynatrace operator.
  *
  * Since the resource detector is not aware how Dynatrace is deployed, the detector attempts to
- * reads all Dynatrace enrichment files. In such cases, reading some of these files may fail but
+ * read all Dynatrace enrichment files. In such cases, reading some of these files may fail but
  * this is expected and does not classify as a problem with the detector. The detector may also not
  * detect any attributes, for example when a Dynatrace deployment is not successful. In such cases,
  * Envoy will be started with no enrichment but Dynatrace users have the means to find out which
