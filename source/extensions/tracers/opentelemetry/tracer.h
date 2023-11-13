@@ -43,12 +43,13 @@ public:
   void sendSpan(::opentelemetry::proto::trace::v1::Span& span);
 
   Tracing::SpanPtr startSpan(const std::string& operation_name, SystemTime start_time,
-                             const OTelSpanAttributes& initial_attributes,
-                             Tracing::Decision tracing_decision, OTelSpanKind span_kind);
+
+                             Tracing::Decision tracing_decision,
+                             const OTelSpanAttributes& initial_attributes, OTelSpanKind span_kind);
 
   Tracing::SpanPtr startSpan(const std::string& operation_name, SystemTime start_time,
-                             const OTelSpanAttributes& initial_attributes,
-                             const SpanContext& previous_span_context, OTelSpanKind span_kind);
+                             const SpanContext& previous_span_context,
+                             const OTelSpanAttributes& initial_attributes, OTelSpanKind span_kind);
 
 private:
   /**
