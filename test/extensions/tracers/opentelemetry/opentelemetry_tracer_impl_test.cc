@@ -209,25 +209,6 @@ resource_spans:
       start_time_unix_nano: {}
       end_time_unix_nano: {}
       trace_state: "test=foo"
-      attributes:
-        - key: "http.request.method"
-          value:
-            string_value: "GET"
-        - key: "server.address"
-          value:
-            string_value: "test.com"
-        - key: "server.port"
-          value:
-            string_value: ""
-        - key: "url.path"
-          value:
-            string_value: "/"
-        - key: "url.query"
-          value:
-            string_value: ""
-        - key: "url.scheme"
-          value:
-            string_value: ""
   )";
   opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest request_proto;
   SystemTime timestamp = time_system_.systemTime();
@@ -598,24 +579,6 @@ resource_spans:
       start_time_unix_nano: {}
       end_time_unix_nano: {}
       attributes:
-        - key: "http.request.method"
-          value:
-            string_value: "GET"
-        - key: "server.address"
-          value:
-            string_value: "test.com"
-        - key: "server.port"
-          value:
-            string_value: ""
-        - key: "url.path"
-          value:
-            string_value: "/"
-        - key: "url.query"
-          value:
-            string_value: ""
-        - key: "url.scheme"
-          value:
-            string_value: ""
         - key: "first_tag_name"
           value:
             string_value: "first_tag_new_value"
@@ -727,25 +690,6 @@ resource_spans:
       kind: SPAN_KIND_SERVER
       start_time_unix_nano: {}
       end_time_unix_nano: {}
-      attributes:
-        - key: "http.request.method"
-          value:
-            string_value: "GET"
-        - key: "server.address"
-          value:
-            string_value: "test.com"
-        - key: "server.port"
-          value:
-            string_value: ""
-        - key: "url.path"
-          value:
-            string_value: "/"
-        - key: "url.query"
-          value:
-            string_value: ""
-        - key: "url.scheme"
-          value:
-            string_value: ""
   )";
   opentelemetry::proto::collector::trace::v1::ExportTraceServiceRequest request_proto;
   int64_t timestamp_ns = std::chrono::nanoseconds(timestamp.time_since_epoch()).count();

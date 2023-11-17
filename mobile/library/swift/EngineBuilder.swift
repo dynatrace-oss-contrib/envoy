@@ -18,8 +18,7 @@ open class XdsBuilder: NSObject {
 
   let xdsServerAddress: String
   let xdsServerPort: UInt32
-  var authHeader: String?
-  var authToken: String?
+  var xdsGrpcInitialMetadata: [String: String] = [:]
   var sslRootCerts: String?
   var sni: String?
   var rtdsResourceName: String?
@@ -37,19 +36,26 @@ open class XdsBuilder: NSObject {
     self.xdsServerPort = xdsServerPort
   }
 
-  /// Sets the authentication HTTP header and token value for authentication with the xDS
-  /// management server.
+  /// Adds a header to the initial HTTP metadata headers sent on the gRPC stream.
   ///
-  /// - parameter header: The HTTP authentication header.
-  /// - parameter token:  The authentication token to be sent in the header.
+  /// A common use for the initial metadata headers is for authentication to the xDS management
+  /// server.
+  ///
+  /// For example, if using API keys to authenticate to Traffic Director on GCP (see
+  /// https://cloud.google.com/docs/authentication/api-keys for details), invoke:
+  ///   builder.addInitialStreamHeader("x-goog-api-key", apiKeyToken)
+  ///          .addInitialStreamHeader("X-Android-Package", appPackageName)
+  ///          .addInitialStreamHeader("X-Android-Cert", sha1KeyFingerprint);
+  ///
+  /// - parameter header: The HTTP header to add on the gRPC stream's initial metadata.
+  /// - parameter value:  The HTTP header value to add on the gRPC stream's initial metadata.
   ///
   /// - returns: This builder.
   @discardableResult
-  public func setAuthenticationToken(
+  public func addInitialStreamHeader(
     header: String,
-    token: String) -> Self {
-    self.authHeader = header
-    self.authToken = token
+    value: String) -> Self {
+    self.xdsGrpcInitialMetadata[header] = value
     return self
   }
 
@@ -143,7 +149,6 @@ open class EngineBuilder: NSObject {
     case custom(String)
   }
 
-  private var grpcStatsDomain: String?
   private var connectTimeoutSeconds: UInt32 = 30
   private var dnsFailureRefreshSecondsBase: UInt32 = 2
   private var dnsFailureRefreshSecondsMax: UInt32 = 10
@@ -170,7 +175,6 @@ open class EngineBuilder: NSObject {
   private var h2ConnectionKeepaliveIdleIntervalMilliseconds: UInt32 = 1
   private var h2ConnectionKeepaliveTimeoutSeconds: UInt32 = 10
   private var maxConnectionsPerHost: UInt32 = 7
-  private var statsFlushSeconds: UInt32 = 60
   private var streamIdleTimeoutSeconds: UInt32 = 15
   private var perTryIdleTimeoutSeconds: UInt32 = 15
   private var appVersion: String = "unspecified"
@@ -184,7 +188,6 @@ open class EngineBuilder: NSObject {
   private var stringAccessors: [String: EnvoyStringAccessor] = [:]
   private var keyValueStores: [String: EnvoyKeyValueStore] = [:]
   private var runtimeGuards: [String: Bool] = [:]
-  private var statsSinks: [String] = []
   private var nodeID: String?
   private var nodeRegion: String?
   private var nodeZone: String?
@@ -208,33 +211,6 @@ open class EngineBuilder: NSObject {
   public init(yaml: String) {
     self.base = .custom(yaml)
   }
-
-#if ENVOY_MOBILE_STATS_REPORTING
-  /// Add a stats domain for Envoy to flush stats to.
-  /// Passing nil disables stats emission.
-  ///
-  /// - parameter grpcStatsDomain: The domain to use for stats.
-  ///
-  /// - returns: This builder.
-  @discardableResult
-  public func addGrpcStatsDomain(_ grpcStatsDomain: String?) -> Self {
-    self.grpcStatsDomain = grpcStatsDomain
-    return self
-  }
-
-  /// Adds additional stats sink, in the form of the raw YAML/JSON configuration.
-  /// Sinks added in this fashion will be included in addition to the gRPC stats sink
-  /// that may be enabled via addGrpcStatsDomain.
-  ///
-  /// - parameter statsSinks: Configurations of stat sinks to add.
-  ///
-  /// - returns: This builder.
-  @discardableResult
-  public func addStatsSinks(_ statsSinks: [String]) -> Self {
-    self.statsSinks = statsSinks
-    return self
-  }
-#endif
 
   /// Add a log level to use with Envoy.
   ///
@@ -391,17 +367,6 @@ open class EngineBuilder: NSObject {
     return self
   }
 #endif
-
-  /// Add an interval at which to flush Envoy stats.
-  ///
-  /// - parameter statsFlushSeconds: Interval at which to flush Envoy stats.
-  ///
-  /// - returns: This builder.
-  @discardableResult
-  public func addStatsFlushSeconds(_ statsFlushSeconds: UInt32) -> Self {
-    self.statsFlushSeconds = statsFlushSeconds
-    return self
-  }
 
   /// Specify whether sockets may attempt to bind to a specific interface, based on network
   /// conditions.
@@ -775,8 +740,7 @@ open class EngineBuilder: NSObject {
   func makeConfig() -> EnvoyConfiguration {
     var xdsServerAddress: String?
     var xdsServerPort: UInt32 = 0
-    var xdsAuthHeader: String?
-    var xdsAuthToken: String?
+    var xdsGrpcInitialMetadata: [String: String] = [:]
     var xdsSslRootCerts: String?
     var xdsSni: String?
     var rtdsResourceName: String?
@@ -788,8 +752,7 @@ open class EngineBuilder: NSObject {
 #if ENVOY_GOOGLE_GRPC
     xdsServerAddress = self.xdsBuilder?.xdsServerAddress
     xdsServerPort = self.xdsBuilder?.xdsServerPort ?? 0
-    xdsAuthHeader = self.xdsBuilder?.authHeader
-    xdsAuthToken = self.xdsBuilder?.authToken
+    xdsGrpcInitialMetadata = self.xdsBuilder?.xdsGrpcInitialMetadata ?? [:]
     xdsSslRootCerts = self.xdsBuilder?.sslRootCerts
     xdsSni = self.xdsBuilder?.sni
     rtdsResourceName = self.xdsBuilder?.rtdsResourceName
@@ -800,7 +763,6 @@ open class EngineBuilder: NSObject {
 #endif
 
     return EnvoyConfiguration(
-      grpcStatsDomain: self.grpcStatsDomain,
       connectTimeoutSeconds: self.connectTimeoutSeconds,
       dnsRefreshSeconds: self.dnsRefreshSeconds,
       dnsFailureRefreshSecondsBase: self.dnsFailureRefreshSecondsBase,
@@ -824,7 +786,6 @@ open class EngineBuilder: NSObject {
         self.h2ConnectionKeepaliveIdleIntervalMilliseconds,
       h2ConnectionKeepaliveTimeoutSeconds: self.h2ConnectionKeepaliveTimeoutSeconds,
       maxConnectionsPerHost: self.maxConnectionsPerHost,
-      statsFlushSeconds: self.statsFlushSeconds,
       streamIdleTimeoutSeconds: self.streamIdleTimeoutSeconds,
       perTryIdleTimeoutSeconds: self.perTryIdleTimeoutSeconds,
       appVersion: self.appVersion,
@@ -834,15 +795,13 @@ open class EngineBuilder: NSObject {
       platformFilterChain: self.platformFilterChain,
       stringAccessors: self.stringAccessors,
       keyValueStores: self.keyValueStores,
-      statsSinks: self.statsSinks,
       nodeId: self.nodeID,
       nodeRegion: self.nodeRegion,
       nodeZone: self.nodeZone,
       nodeSubZone: self.nodeSubZone,
       xdsServerAddress: xdsServerAddress,
       xdsServerPort: xdsServerPort,
-      xdsAuthHeader: xdsAuthHeader,
-      xdsAuthToken: xdsAuthToken,
+      xdsGrpcInitialMetadata: xdsGrpcInitialMetadata,
       xdsSslRootCerts: xdsSslRootCerts,
       xdsSni: xdsSni,
       rtdsResourceName: rtdsResourceName,
@@ -870,9 +829,6 @@ private extension EngineBuilder {
   func generateBootstrap() -> Bootstrap {
     var cxxBuilder = Envoy.Platform.EngineBuilder()
     cxxBuilder.addLogLevel(self.logLevel.toCXX())
-    if let grpcStatsDomain = self.grpcStatsDomain {
-      cxxBuilder.addGrpcStatsDomain(grpcStatsDomain.toCXX())
-    }
 
     cxxBuilder.addConnectTimeoutSeconds(Int32(self.connectTimeoutSeconds))
     cxxBuilder.addDnsRefreshSeconds(Int32(self.dnsRefreshSeconds))
@@ -905,7 +861,6 @@ private extension EngineBuilder {
       Int32(self.h2ConnectionKeepaliveTimeoutSeconds)
     )
     cxxBuilder.addMaxConnectionsPerHost(Int32(self.maxConnectionsPerHost))
-    cxxBuilder.addStatsFlushSeconds(Int32(self.statsFlushSeconds))
     cxxBuilder.setStreamIdleTimeoutSeconds(Int32(self.streamIdleTimeoutSeconds))
     cxxBuilder.setPerTryIdleTimeoutSeconds(Int32(self.perTryIdleTimeoutSeconds))
     cxxBuilder.setAppVersion(self.appVersion.toCXX())
@@ -923,8 +878,6 @@ private extension EngineBuilder {
     for filter in self.platformFilterChain.reversed() {
       cxxBuilder.addPlatformFilter(filter.filterName.toCXX())
     }
-
-    cxxBuilder.addStatsSinks(self.statsSinks.toCXX())
 
     if
       let nodeRegion = self.nodeRegion,
@@ -947,10 +900,9 @@ private extension EngineBuilder {
 #if ENVOY_GOOGLE_GRPC
     if let xdsBuilder = self.xdsBuilder {
       var cxxXdsBuilder = Envoy.Platform.XdsBuilder(xdsBuilder.xdsServerAddress.toCXX(),
-                                                    Int32(xdsBuilder.xdsServerPort))
-      if let xdsAuthHeader = xdsBuilder.authHeader {
-        cxxXdsBuilder.setAuthenticationToken(xdsAuthHeader.toCXX(),
-                                             xdsBuilder.authToken?.toCXX() ?? "".toCXX())
+                                                    xdsBuilder.xdsServerPort)
+      for (header, value) in xdsBuilder.xdsGrpcInitialMetadata {
+        cxxXdsBuilder.addInitialStreamHeader(header.toCXX(), value.toCXX())
       }
       if let xdsSslRootCerts = xdsBuilder.sslRootCerts {
         cxxXdsBuilder.setSslRootCerts(xdsSslRootCerts.toCXX())

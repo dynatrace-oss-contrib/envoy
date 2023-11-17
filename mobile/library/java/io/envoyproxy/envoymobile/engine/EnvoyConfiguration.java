@@ -25,7 +25,6 @@ public class EnvoyConfiguration {
     ACCEPT_UNTRUSTED;
   }
 
-  public final String grpcStatsDomain;
   public final Integer connectTimeoutSeconds;
   public final Integer dnsRefreshSeconds;
   public final Integer dnsFailureRefreshSecondsBase;
@@ -49,7 +48,6 @@ public class EnvoyConfiguration {
   public final Integer h2ConnectionKeepaliveTimeoutSeconds;
   public final Integer maxConnectionsPerHost;
   public final List<EnvoyHTTPFilterFactory> httpPlatformFilterFactories;
-  public final Integer statsFlushSeconds;
   public final Integer streamIdleTimeoutSeconds;
   public final Integer perTryIdleTimeoutSeconds;
   public final String appVersion;
@@ -58,15 +56,13 @@ public class EnvoyConfiguration {
   public final List<EnvoyNativeFilterConfig> nativeFilterChain;
   public final Map<String, EnvoyStringAccessor> stringAccessors;
   public final Map<String, EnvoyKeyValueStore> keyValueStores;
-  public final List<String> statSinks;
   public final Map<String, String> runtimeGuards;
   public final Boolean enablePlatformCertificatesValidation;
   public final String rtdsResourceName;
   public final Integer rtdsTimeoutSeconds;
   public final String xdsAddress;
   public final Integer xdsPort;
-  public final String xdsAuthHeader;
-  public final String xdsAuthToken;
+  public final Map<String, String> xdsGrpcInitialMetadata;
   public final String xdsRootCerts;
   public final String xdsSni;
   public final String nodeId;
@@ -83,7 +79,6 @@ public class EnvoyConfiguration {
   /**
    * Create a new instance of the configuration.
    *
-   * @param grpcStatsDomain                               the domain to flush stats to.
    * @param connectTimeoutSeconds                         timeout for new network connections to
    *     hosts in
    *                                                      the cluster.
@@ -125,7 +120,6 @@ public class EnvoyConfiguration {
    * @param h2ConnectionKeepaliveTimeoutSeconds           rate in seconds to timeout h2 pings.
    * @param maxConnectionsPerHost                         maximum number of connections to open to a
    *                                                      single host.
-   * @param statsFlushSeconds                             interval at which to flush Envoy stats.
    * @param streamIdleTimeoutSeconds                      idle timeout for HTTP streams.
    * @param perTryIdleTimeoutSeconds                      per try idle timeout for HTTP streams.
    * @param appVersion                                    the App Version of the App using this
@@ -143,11 +137,9 @@ public class EnvoyConfiguration {
    * @param rtdsTimeoutSeconds                            the timeout for RTDS fetches.
    * @param xdsAddress                                    the address for the xDS management server.
    * @param xdsPort                                       the port for the xDS server.
-   * @param xdsAuthHeader                                 the HTTP header to use for sending the
-   *                                                      authentication token to the xDS server.
-   * @param xdsAuthToken                                  the token to send as the authentication
-   *                                                      header value to authenticate with the
-   *                                                      xDS server.
+   * @param xdsGrpcInitialMetadata                        The Headers (as key/value pairs) that must
+   *                                                      be included in the xDs gRPC stream's
+   *                                                      initial metadata (as HTTP headers).
    * @param xdsRootCerts                                  the root certificates to use for the TLS
    *                                                      handshake during connection establishment
    *                                                      with the xDS management server.
@@ -164,29 +156,27 @@ public class EnvoyConfiguration {
    *     could be empty.
    */
   public EnvoyConfiguration(
-      String grpcStatsDomain, int connectTimeoutSeconds, int dnsRefreshSeconds,
-      int dnsFailureRefreshSecondsBase, int dnsFailureRefreshSecondsMax, int dnsQueryTimeoutSeconds,
-      int dnsMinRefreshSeconds, List<String> dnsPreresolveHostnames, boolean enableDNSCache,
-      int dnsCacheSaveIntervalSeconds, boolean enableDrainPostDnsRefresh, boolean enableHttp3,
-      String http3ConnectionOptions, String http3ClientConnectionOptions,
-      Map<String, Integer> quicHints, List<String> quicCanonicalSuffixes,
-      boolean enableGzipDecompression, boolean enableBrotliDecompression,
-      boolean enableSocketTagging, boolean enableInterfaceBinding,
-      int h2ConnectionKeepaliveIdleIntervalMilliseconds, int h2ConnectionKeepaliveTimeoutSeconds,
-      int maxConnectionsPerHost, int statsFlushSeconds, int streamIdleTimeoutSeconds,
-      int perTryIdleTimeoutSeconds, String appVersion, String appId,
+      int connectTimeoutSeconds, int dnsRefreshSeconds, int dnsFailureRefreshSecondsBase,
+      int dnsFailureRefreshSecondsMax, int dnsQueryTimeoutSeconds, int dnsMinRefreshSeconds,
+      List<String> dnsPreresolveHostnames, boolean enableDNSCache, int dnsCacheSaveIntervalSeconds,
+      boolean enableDrainPostDnsRefresh, boolean enableHttp3, String http3ConnectionOptions,
+      String http3ClientConnectionOptions, Map<String, Integer> quicHints,
+      List<String> quicCanonicalSuffixes, boolean enableGzipDecompression,
+      boolean enableBrotliDecompression, boolean enableSocketTagging,
+      boolean enableInterfaceBinding, int h2ConnectionKeepaliveIdleIntervalMilliseconds,
+      int h2ConnectionKeepaliveTimeoutSeconds, int maxConnectionsPerHost,
+      int streamIdleTimeoutSeconds, int perTryIdleTimeoutSeconds, String appVersion, String appId,
       TrustChainVerification trustChainVerification,
       List<EnvoyNativeFilterConfig> nativeFilterChain,
       List<EnvoyHTTPFilterFactory> httpPlatformFilterFactories,
       Map<String, EnvoyStringAccessor> stringAccessors,
-      Map<String, EnvoyKeyValueStore> keyValueStores, List<String> statSinks,
-      Map<String, Boolean> runtimeGuards, boolean enablePlatformCertificatesValidation,
-      String rtdsResourceName, Integer rtdsTimeoutSeconds, String xdsAddress, Integer xdsPort,
-      String xdsAuthHeader, String xdsAuthToken, String xdsRootCerts, String xdsSni, String nodeId,
+      Map<String, EnvoyKeyValueStore> keyValueStores, Map<String, Boolean> runtimeGuards,
+      boolean enablePlatformCertificatesValidation, String rtdsResourceName,
+      Integer rtdsTimeoutSeconds, String xdsAddress, Integer xdsPort,
+      Map<String, String> xdsGrpcInitialMetadata, String xdsRootCerts, String xdsSni, String nodeId,
       String nodeRegion, String nodeZone, String nodeSubZone, Struct nodeMetadata,
       String cdsResourcesLocator, Integer cdsTimeoutSeconds, boolean enableCds) {
     JniLibrary.load();
-    this.grpcStatsDomain = grpcStatsDomain;
     this.connectTimeoutSeconds = connectTimeoutSeconds;
     this.dnsRefreshSeconds = dnsRefreshSeconds;
     this.dnsFailureRefreshSecondsBase = dnsFailureRefreshSecondsBase;
@@ -213,7 +203,6 @@ public class EnvoyConfiguration {
         h2ConnectionKeepaliveIdleIntervalMilliseconds;
     this.h2ConnectionKeepaliveTimeoutSeconds = h2ConnectionKeepaliveTimeoutSeconds;
     this.maxConnectionsPerHost = maxConnectionsPerHost;
-    this.statsFlushSeconds = statsFlushSeconds;
     this.streamIdleTimeoutSeconds = streamIdleTimeoutSeconds;
     this.perTryIdleTimeoutSeconds = perTryIdleTimeoutSeconds;
     this.appVersion = appVersion;
@@ -234,7 +223,6 @@ public class EnvoyConfiguration {
     this.httpPlatformFilterFactories = httpPlatformFilterFactories;
     this.stringAccessors = stringAccessors;
     this.keyValueStores = keyValueStores;
-    this.statSinks = statSinks;
 
     this.runtimeGuards = new HashMap<String, String>();
     for (Map.Entry<String, Boolean> guardAndValue : runtimeGuards.entrySet()) {
@@ -245,8 +233,7 @@ public class EnvoyConfiguration {
     this.rtdsTimeoutSeconds = rtdsTimeoutSeconds;
     this.xdsAddress = xdsAddress;
     this.xdsPort = xdsPort;
-    this.xdsAuthHeader = xdsAuthHeader;
-    this.xdsAuthToken = xdsAuthToken;
+    this.xdsGrpcInitialMetadata = new HashMap<>(xdsGrpcInitialMetadata);
     this.xdsRootCerts = xdsRootCerts;
     this.xdsSni = xdsSni;
     this.nodeId = nodeId;
@@ -266,24 +253,23 @@ public class EnvoyConfiguration {
     Collections.reverse(reverseFilterChain);
 
     byte[][] filterChain = JniBridgeUtility.toJniBytes(reverseFilterChain);
-    byte[][] statsSinks = JniBridgeUtility.stringsToJniBytes(statSinks);
     byte[][] dnsPreresolve = JniBridgeUtility.stringsToJniBytes(dnsPreresolveHostnames);
     byte[][] runtimeGuards = JniBridgeUtility.mapToJniBytes(this.runtimeGuards);
     byte[][] quicHints = JniBridgeUtility.mapToJniBytes(this.quicHints);
     byte[][] quicSuffixes = JniBridgeUtility.stringsToJniBytes(quicCanonicalSuffixes);
+    byte[][] xdsGrpcInitialMetadata = JniBridgeUtility.mapToJniBytes(this.xdsGrpcInitialMetadata);
 
     return JniLibrary.createBootstrap(
-        grpcStatsDomain, connectTimeoutSeconds, dnsRefreshSeconds, dnsFailureRefreshSecondsBase,
+        connectTimeoutSeconds, dnsRefreshSeconds, dnsFailureRefreshSecondsBase,
         dnsFailureRefreshSecondsMax, dnsQueryTimeoutSeconds, dnsMinRefreshSeconds, dnsPreresolve,
         enableDNSCache, dnsCacheSaveIntervalSeconds, enableDrainPostDnsRefresh, enableHttp3,
         http3ConnectionOptions, http3ClientConnectionOptions, quicHints, quicSuffixes,
         enableGzipDecompression, enableBrotliDecompression, enableSocketTagging,
         enableInterfaceBinding, h2ConnectionKeepaliveIdleIntervalMilliseconds,
-        h2ConnectionKeepaliveTimeoutSeconds, maxConnectionsPerHost, statsFlushSeconds,
-        streamIdleTimeoutSeconds, perTryIdleTimeoutSeconds, appVersion, appId,
-        enforceTrustChainVerification, filterChain, statsSinks,
+        h2ConnectionKeepaliveTimeoutSeconds, maxConnectionsPerHost, streamIdleTimeoutSeconds,
+        perTryIdleTimeoutSeconds, appVersion, appId, enforceTrustChainVerification, filterChain,
         enablePlatformCertificatesValidation, runtimeGuards, rtdsResourceName, rtdsTimeoutSeconds,
-        xdsAddress, xdsPort, xdsAuthHeader, xdsAuthToken, xdsRootCerts, xdsSni, nodeId, nodeRegion,
+        xdsAddress, xdsPort, xdsGrpcInitialMetadata, xdsRootCerts, xdsSni, nodeId, nodeRegion,
         nodeZone, nodeSubZone, nodeMetadata.toByteArray(), cdsResourcesLocator, cdsTimeoutSeconds,
         enableCds);
   }
