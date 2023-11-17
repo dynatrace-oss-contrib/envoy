@@ -23,7 +23,6 @@ class DynatraceSamplerIntegrationTest : public Envoy::HttpIntegrationTest,
                                         public testing::TestWithParam<Network::Address::IpVersion> {
 public:
   DynatraceSamplerIntegrationTest() : HttpIntegrationTest(Http::CodecType::HTTP1, GetParam()) {
-
     const std::string yaml_string = R"EOF(
   provider:
     name: envoy.tracers.opentelemetry
