@@ -28,11 +28,7 @@ class TestSampler : public Sampler {
 public:
   MOCK_METHOD(SamplingResult, shouldSample,
               ((const absl::optional<SpanContext>), (const std::string&), (const std::string&),
-<<<<<<< HEAD
-               (OtelSpanKind), (const std::map<std::string, std::string>&),
-=======
                (OTelSpanKind), (OptRef<const Tracing::TraceContext>),
->>>>>>> upstream/main
                (const std::vector<SpanContext>&)),
               (override));
   MOCK_METHOD(std::string, getDescription, (), (const, override));
@@ -139,11 +135,7 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
   // shouldSample returns a result without additional attributes and Decision::RECORD_AND_SAMPLE
   EXPECT_CALL(*test_sampler, shouldSample(_, _, _, _, _, _))
       .WillOnce([](const absl::optional<SpanContext>, const std::string&, const std::string&,
-<<<<<<< HEAD
-                   OtelSpanKind, const std::map<std::string, std::string>&,
-=======
                    OTelSpanKind, OptRef<const Tracing::TraceContext>,
->>>>>>> upstream/main
                    const std::vector<SpanContext>&) {
         SamplingResult res;
         res.decision = Decision::RECORD_AND_SAMPLE;

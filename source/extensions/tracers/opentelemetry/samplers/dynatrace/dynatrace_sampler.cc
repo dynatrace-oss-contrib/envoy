@@ -28,17 +28,51 @@ FW4Tag DynatraceSampler::getFW4Tag(const Tracestate& tracestate) {
   return FW4Tag::createInvalid();
 }
 
+/*
+OTelSpanAttributes getInitialAttributes(const Tracing::TraceContext& trace_context,
+                                        OTelSpanKind span_kind) {
+  OTelSpanAttributes attributes;
+
+  // required attributes for a server span are defined in
+  // https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-spans.md
+  if (span_kind == ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER) {
+    std::vector<absl::string_view> address_port =
+        absl::StrSplit(trace_context.host(), ":", absl::SkipEmpty());
+    if (address_port.size() > 0) {
+      attributes["server.address"] = address_port[0];
+    }
+    if (address_port.size() > 1) {
+      attributes["server.port"] = address_port[1];
+    }
+    std::vector<absl::string_view> path_query =
+        absl::StrSplit(trace_context.path(), "?", absl::SkipEmpty());
+    if (path_query.size() > 0) {
+      attributes["url.path"] = path_query[0];
+    }
+    if (path_query.size() > 1) {
+      attributes["url.query"] = path_query[1];
+    }
+    auto scheme = trace_context.getByKey(":scheme");
+    if (scheme.has_value()) {
+      attributes["url.scheme"] = scheme.value();
+    }
+    if (!trace_context.method().empty()) {
+      attributes["http.request.method"] = trace_context.method();
+    }
+  }
+  return attributes;
+}
+*/
+
 SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                               const std::string& /*trace_id*/,
-                                              const std::string& /*name*/, OtelSpanKind /*kind*/,
-                                              const std::map<std::string, std::string>& attributes,
+                                              const std::string& /*name*/, OTelSpanKind /*kind*/,
+                                              OptRef<const Tracing::TraceContext> /*trace_context*/,
                                               const std::vector<SpanContext>& /*links*/) {
 
   SamplingResult result;
   std::map<std::string, std::string> att;
-  if (attributes.size() > 10) {
-    return {};
-  }
+
   Tracestate tracestate;
   tracestate.parse(parent_context.has_value() ? parent_context->tracestate() : "");
 
