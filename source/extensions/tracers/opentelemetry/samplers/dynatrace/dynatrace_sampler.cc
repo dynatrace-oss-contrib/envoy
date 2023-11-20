@@ -67,11 +67,24 @@ OTelSpanAttributes getInitialAttributes(const Tracing::TraceContext& trace_conte
 SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                               const std::string& /*trace_id*/,
                                               const std::string& /*name*/, OTelSpanKind /*kind*/,
-                                              OptRef<const Tracing::TraceContext> /*trace_context*/,
+                                              OptRef<const Tracing::TraceContext> trace_context,
                                               const std::vector<SpanContext>& /*links*/) {
 
   SamplingResult result;
   std::map<std::string, std::string> att;
+
+  if (trace_context.has_value()) {
+    ENVOY_LOG(info, "trace_context->path:\t{}", trace_context->path());
+    ENVOY_LOG(info, "trace_context->method():\t{}", trace_context->method());
+    ENVOY_LOG(info, "trace_context->host():\t{}", trace_context->host());
+  }
+  auto current = tracer_factory_context_.serverFactoryContext()
+                     .timeSource()
+                     .monotonicTime()
+                     .time_since_epoch();
+
+  auto current_ms = std::chrono::duration_cast<std::chrono::milliseconds>(current);
+  ENVOY_LOG(info, "monotonicTime:\t{}", current_ms.count());
 
   Tracestate tracestate;
   tracestate.parse(parent_context.has_value() ? parent_context->tracestate() : "");
