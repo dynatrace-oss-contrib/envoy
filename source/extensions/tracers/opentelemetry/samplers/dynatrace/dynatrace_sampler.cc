@@ -64,6 +64,19 @@ OTelSpanAttributes getInitialAttributes(const Tracing::TraceContext& trace_conte
 }
 */
 
+DynatraceSampler::DynatraceSampler(
+    const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config,
+    Server::Configuration::TracerFactoryContext& context)
+    : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
+      dynatrace_tracestate_(tenant_id_, cluster_id_), tracer_factory_context_(context) {
+  timer_ = tracer_factory_context_.serverFactoryContext().mainThreadDispatcher().createTimer(
+      [this]() -> void {
+        ENVOY_LOG(info, "HELLO FROM TIMER");
+        timer_->enableTimer(std::chrono::seconds(60));
+      });
+  timer_->enableTimer(std::chrono::seconds(10));
+}
+
 SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                               const std::string& /*trace_id*/,
                                               const std::string& /*name*/, OTelSpanKind /*kind*/,
