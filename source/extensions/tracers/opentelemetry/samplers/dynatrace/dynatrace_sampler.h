@@ -37,7 +37,7 @@ private:
   DynatraceTracestate dynatrace_tracestate_;
   Server::Configuration::TracerFactoryContext& tracer_factory_context_;
   Event::TimerPtr timer_;
-
+  std::atomic<uint32_t> counter_;
   FW4Tag getFW4Tag(const Tracestate& tracestate);
 };
 

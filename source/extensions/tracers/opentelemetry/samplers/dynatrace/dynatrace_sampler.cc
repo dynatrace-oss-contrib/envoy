@@ -68,7 +68,8 @@ DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config,
     Server::Configuration::TracerFactoryContext& context)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
-      dynatrace_tracestate_(tenant_id_, cluster_id_), tracer_factory_context_(context) {
+      dynatrace_tracestate_(tenant_id_, cluster_id_), tracer_factory_context_(context),
+      counter_(0) {
   timer_ = tracer_factory_context_.serverFactoryContext().mainThreadDispatcher().createTimer(
       [this]() -> void {
         ENVOY_LOG(info, "HELLO FROM TIMER");
@@ -109,9 +110,19 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(fw4_tag.getSamplingExponent());
     result.tracestate = parent_context->tracestate();
 
-  } else {                     // make a sampling decision
-    bool sample = true;        // TODO
-    int sampling_exponent = 0; // TODO
+  } else {
+    // make a sampling decision
+    uint32_t current_counter = counter_++;
+    bool sample;
+    int sampling_exponent;
+    if (current_counter % 2) {
+      sample = true;
+      sampling_exponent = 1;
+    } else {
+      sample = false;
+      sampling_exponent = 0;
+    }
+
     att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(sampling_exponent);
 
     result.decision = sample ? Decision::RECORD_AND_SAMPLE : Decision::DROP;
