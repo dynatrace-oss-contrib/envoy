@@ -43,7 +43,8 @@ public:
   int getSamplingExponent() const { return sampling_exponent_; };
 
   std::string createValue() const {
-    std::string ret = absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_);
+    std::string ret =
+        absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_, ";0");
     return ret;
   }
 
