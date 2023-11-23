@@ -1,13 +1,8 @@
 #pragma once
 
-#include <cstdint>
-#include <sstream>
 #include <string>
-#include <vector>
 
-#include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
 
 namespace Envoy {
@@ -17,36 +12,17 @@ namespace OpenTelemetry {
 
 class FW4Tag {
 public:
-  static FW4Tag createInvalid() { return {false, false, 0}; }
+  static FW4Tag createInvalid();
 
-  static FW4Tag create(bool ignored, int sampling_exponent) {
-    return {true, ignored, sampling_exponent};
-  }
+  static FW4Tag create(bool ignored, int sampling_exponent);
 
-  static FW4Tag create(const std::string& value) {
-    std::vector<absl::string_view> tracestate_components =
-        absl::StrSplit(value, ';', absl::AllowEmpty());
-    if (tracestate_components.size() < 7) {
-      return createInvalid();
-    }
+  static FW4Tag create(const std::string& value);
 
-    if (tracestate_components[0] != "fw4") {
-      return createInvalid();
-    }
-    bool ignored = tracestate_components[5] == "1";
-    int sampling_exponent = std::stoi(std::string(tracestate_components[6]));
-    return {true, ignored, sampling_exponent};
-  }
+  std::string asString() const;
 
   bool isValid() const { return valid_; };
   bool isIgnored() const { return ignored_; };
   int getSamplingExponent() const { return sampling_exponent_; };
-
-  std::string createValue() const {
-    std::string ret =
-        absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_, ";0");
-    return ret;
-  }
 
 private:
   FW4Tag(bool valid, bool ignored, int sampling_exponent)
@@ -58,9 +34,9 @@ private:
 };
 
 // <tenantID>-<clusterID>@dt=fw4;0;0;0;0;<isIgnored>;<sampling_exponent>;<rootPathRandom>
-class DynatraceTracestate {
+class DtTracestateEntry {
 public:
-  DynatraceTracestate(const std::string& tenant_id, const std::string& cluster_id) {
+  DtTracestateEntry(const std::string& tenant_id, const std::string& cluster_id) {
     key_ = absl::StrCat(absl::string_view(tenant_id), "-", absl::string_view(cluster_id), "@dt");
   }
 

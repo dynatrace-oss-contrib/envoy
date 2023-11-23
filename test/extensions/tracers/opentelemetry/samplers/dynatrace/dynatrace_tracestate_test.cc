@@ -11,7 +11,7 @@ namespace Tracers {
 namespace OpenTelemetry {
 
 TEST(DynatraceTracestateTest, TestKey) {
-  DynatraceTracestate tracestate("98812ad49", "980df25c");
+  DtTracestateEntry tracestate("98812ad49", "980df25c");
   EXPECT_STREQ(tracestate.getKey().c_str(), "98812ad49-980df25c@dt");
 }
 

@@ -34,10 +34,8 @@ public:
 private:
   std::string tenant_id_;
   std::string cluster_id_;
-  DynatraceTracestate dynatrace_tracestate_;
-  Server::Configuration::TracerFactoryContext& tracer_factory_context_;
-  Event::TimerPtr timer_;
-  std::atomic<uint32_t> counter_;
+  DtTracestateEntry dt_tracestate_entry_;
+  std::atomic<uint32_t> counter_; // request counter for dummy sampling
   FW4Tag getFW4Tag(const Tracestate& tracestate);
 };
 

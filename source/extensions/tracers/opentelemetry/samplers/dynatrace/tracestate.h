@@ -9,6 +9,7 @@ namespace Tracers {
 namespace OpenTelemetry {
 
 class TracestateEntry {
+  // TODO: could be string_views to Tracestate::raw_trace_state_
 public:
   std::string key;
   std::string value;
@@ -24,6 +25,7 @@ public:
   void parse(const std::string& tracestate);
 
   void add(const std::string& key, const std::string& value);
+
   std::vector<TracestateEntry> entries() const { return entries_; }
 
   std::string asString() const { return raw_trace_state_; }

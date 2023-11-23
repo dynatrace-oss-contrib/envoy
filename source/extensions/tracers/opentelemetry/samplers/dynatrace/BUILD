@@ -25,6 +25,7 @@ envoy_cc_library(
     name = "dynatrace_sampler_lib",
     srcs = [
         "dynatrace_sampler.cc",
+        "dynatrace_tracestate.cc",
         "tracestate.cc",
     ],
     hdrs = [
