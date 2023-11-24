@@ -20,7 +20,7 @@ namespace OpenTelemetry {
 class DynatraceSampler : public Sampler, Logger::Loggable<Logger::Id::tracing> {
 public:
   DynatraceSampler(
-      const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config,
+      const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
       Server::Configuration::TracerFactoryContext& context);
 
   SamplingResult shouldSample(const absl::optional<SpanContext> parent_context,

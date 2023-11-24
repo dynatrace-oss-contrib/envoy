@@ -29,7 +29,7 @@ FW4Tag DynatraceSampler::getFW4Tag(const Tracestate& tracestate) {
 }
 
 DynatraceSampler::DynatraceSampler(
-    const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config,
+    const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
     Server::Configuration::TracerFactoryContext& /*context*/)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_), counter_(0) {}
