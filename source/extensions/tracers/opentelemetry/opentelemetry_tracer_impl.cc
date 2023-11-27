@@ -39,7 +39,7 @@ tryCreateSamper(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemet
     if (!factory) {
       throw EnvoyException(fmt::format("Sampler factory not found: '{}'", sampler_config.name()));
     }
-    sampler = factory->createSampler(sampler_config.typed_config(), context);
+    sampler = factory->createSampler(sampler_config.typed_config(), context, opentelemetry_config);
   }
   return sampler;
 }

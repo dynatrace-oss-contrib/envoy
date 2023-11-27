@@ -30,9 +30,11 @@ FW4Tag DynatraceSampler::getFW4Tag(const Tracestate& tracestate) {
 
 DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
-    Server::Configuration::TracerFactoryContext& /*context*/)
+    Server::Configuration::TracerFactoryContext& context,
+    const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
-      dt_tracestate_entry_(tenant_id_, cluster_id_), counter_(0) {}
+      dt_tracestate_entry_(tenant_id_, cluster_id_),
+      sampler_config_fetcher_(context, opentelemetry_config.http_service()), counter_(0) {}
 
 SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                               const std::string& /*trace_id*/,

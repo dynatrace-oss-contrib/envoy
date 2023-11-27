@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "envoy/common/optref.h"
+#include "envoy/config/trace/v3/opentelemetry.pb.h"
 #include "envoy/config/typed_config.h"
 #include "envoy/server/tracer_config.h"
 #include "envoy/tracing/trace_context.h"
@@ -105,8 +106,10 @@ public:
    * @param context The TracerFactoryContext.
    * @return SamplerSharedPtr A sampler.
    */
-  virtual SamplerSharedPtr createSampler(const Protobuf::Message& config,
-                                         Server::Configuration::TracerFactoryContext& context) PURE;
+  virtual SamplerSharedPtr
+  createSampler(const Protobuf::Message& config,
+                Server::Configuration::TracerFactoryContext& context,
+                const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config) PURE;
 
   std::string category() const override { return "envoy.tracers.opentelemetry.samplers"; }
 };
