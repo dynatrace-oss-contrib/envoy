@@ -4,8 +4,7 @@
 
 #include "source/common/config/utility.h"
 #include "source/common/protobuf/utility.h"
-
-#include "dynatrace_sampler.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_sampler.h"
 
 namespace Envoy {
 namespace Extensions {

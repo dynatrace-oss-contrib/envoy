@@ -8,6 +8,10 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+// TODO: file should be moved outside "dynatrace" folder, can be useful for other implementations
+// should be aligned to open telemetry implementation:
+// https://github.com/open-telemetry/opentelemetry-cpp/blob/main/api/include/opentelemetry/trace/trace_state.h
+
 class TracestateEntry {
   // TODO: could be string_views to Tracestate::raw_trace_state_
 public:
