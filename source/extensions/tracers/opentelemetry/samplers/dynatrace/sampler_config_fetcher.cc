@@ -11,7 +11,7 @@ namespace OpenTelemetry {
 SamplerConfigFetcher::SamplerConfigFetcher(Server::Configuration::TracerFactoryContext& context,
                                            const envoy::config::core::v3::HttpService& http_service)
     : cluster_manager_(context.serverFactoryContext().clusterManager()),
-      http_service_(http_service) {
+      http_service_(http_service), sampler_config_() {
 
   for (const auto& header_value_option : http_service_.request_headers_to_add()) {
     parsed_headers_to_add_.push_back({Http::LowerCaseString(header_value_option.header().key()),
@@ -59,6 +59,9 @@ void SamplerConfigFetcher::onSuccess(const Http::AsyncClient::Request& /*request
     ENVOY_LOG(error, "SamplerConfigFetcher received a non-success status code: {}", response_code);
   } else {
     ENVOY_LOG(info, "SamplerConfigFetcher received success status code: {}", response_code);
+    // TODO: parse respone
+    // sampler_config_.parse(http_response->bodyAsString());
+    sampler_config_.parse("{\n \"threshold\" : 2000 \n }");
   }
 }
 

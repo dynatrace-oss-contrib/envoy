@@ -14,6 +14,7 @@
 #include "source/common/http/headers.h"
 #include "source/common/http/message_impl.h"
 #include "source/common/http/utility.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampler_config.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -34,6 +35,8 @@ public:
   void onBeforeFinalizeUpstreamSpan(Envoy::Tracing::Span& /*span*/,
                                     const Http::ResponseHeaderMap* /*response_headers*/) override{};
 
+  const SamplerConfig& getSamplerConfig() const { return sampler_config_; }
+
   ~SamplerConfigFetcher() override;
 
 private:
@@ -42,6 +45,7 @@ private:
   envoy::config::core::v3::HttpService http_service_;
   std::vector<std::pair<const Http::LowerCaseString, const std::string>> parsed_headers_to_add_;
   Http::AsyncClient::Request* active_request_{};
+  SamplerConfig sampler_config_;
 };
 
 } // namespace OpenTelemetry
