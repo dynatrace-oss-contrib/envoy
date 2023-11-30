@@ -11,16 +11,16 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
-SamplerSharedPtr DynatraceSamplerFactory::createSampler(
-    const Protobuf::Message& config, Server::Configuration::TracerFactoryContext& context,
-    const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config) {
+SamplerSharedPtr
+DynatraceSamplerFactory::createSampler(const Protobuf::Message& config,
+                                       Server::Configuration::TracerFactoryContext& context) {
   auto mptr = Envoy::Config::Utility::translateAnyToFactoryConfig(
       dynamic_cast<const ProtobufWkt::Any&>(config), context.messageValidationVisitor(), *this);
   return std::make_shared<DynatraceSampler>(
       MessageUtil::downcastAndValidate<
           const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig&>(
           *mptr, context.messageValidationVisitor()),
-      context, opentelemetry_config);
+      context);
 }
 
 /**

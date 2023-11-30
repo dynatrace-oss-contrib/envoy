@@ -27,23 +27,8 @@ TEST(DynatraceSamplerFactoryTest, Test) {
   )EOF";
   TestUtility::loadFromYaml(sampler_yaml, typed_config);
 
-  const std::string otel_yaml = R"EOF(
-    http_service:
-      http_uri:
-        cluster: "my_o11y_backend"
-        uri: "https://some-o11y.com/otlp/v1/traces"
-        timeout: 0.250s
-      request_headers_to_add:
-      - header:
-          key: "Authorization"
-          value: "auth-token"
-    )EOF";
-  envoy::config::trace::v3::OpenTelemetryConfig opentelemetry_config;
-  TestUtility::loadFromYaml(otel_yaml, opentelemetry_config);
-
   NiceMock<Server::Configuration::MockTracerFactoryContext> context;
-  EXPECT_NE(factory->createSampler(typed_config.typed_config(), context, opentelemetry_config),
-            nullptr);
+  EXPECT_NE(factory->createSampler(typed_config.typed_config(), context), nullptr);
   EXPECT_STREQ(factory->name().c_str(), "envoy.tracers.opentelemetry.samplers.dynatrace");
 }
 

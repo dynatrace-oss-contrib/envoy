@@ -106,10 +106,8 @@ public:
    * @param context The TracerFactoryContext.
    * @return SamplerSharedPtr A sampler.
    */
-  virtual SamplerSharedPtr
-  createSampler(const Protobuf::Message& config,
-                Server::Configuration::TracerFactoryContext& context,
-                const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config) PURE;
+  virtual SamplerSharedPtr createSampler(const Protobuf::Message& config,
+                                         Server::Configuration::TracerFactoryContext& context) PURE;
 
   std::string category() const override { return "envoy.tracers.opentelemetry.samplers"; }
 };

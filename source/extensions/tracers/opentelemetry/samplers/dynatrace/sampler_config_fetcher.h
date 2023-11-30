@@ -46,6 +46,8 @@ private:
   std::vector<std::pair<const Http::LowerCaseString, const std::string>> parsed_headers_to_add_;
   Http::AsyncClient::Request* active_request_{};
   SamplerConfig sampler_config_;
+
+  void onRequestDone();
 };
 
 } // namespace OpenTelemetry

@@ -22,8 +22,7 @@ class DynatraceSampler : public Sampler, Logger::Loggable<Logger::Id::tracing> {
 public:
   DynatraceSampler(
       const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
-      Server::Configuration::TracerFactoryContext& context,
-      const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config);
+      Server::Configuration::TracerFactoryContext& context);
 
   SamplingResult shouldSample(const absl::optional<SpanContext> parent_context,
                               const std::string& trace_id, const std::string& name,

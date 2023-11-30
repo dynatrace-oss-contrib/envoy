@@ -23,30 +23,16 @@ class DynatraceSamplerTest : public testing::Test {
           cluster_id: "980df25c"
   )EOF";
 
-  const std::string otel_yaml = R"EOF(
-    http_service:
-      http_uri:
-        cluster: "my_o11y_backend"
-        uri: "https://some-o11y.com/otlp/v1/traces"
-        timeout: 0.250s
-      request_headers_to_add:
-      - header:
-          key: "Authorization"
-          value: "auth-token"
-    )EOF";
-
 public:
   DynatraceSamplerTest() {
     TestUtility::loadFromYaml(yaml_string, config_);
-    TestUtility::loadFromYaml(otel_yaml, opentelemetry_config_);
     NiceMock<Server::Configuration::MockTracerFactoryContext> context;
-    sampler_ = std::make_unique<DynatraceSampler>(config_, context, opentelemetry_config_);
+    sampler_ = std::make_unique<DynatraceSampler>(config_, context);
     EXPECT_STREQ(sampler_->getDescription().c_str(), "DynatraceSampler");
   }
 
 protected:
   envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config_;
-  envoy::config::trace::v3::OpenTelemetryConfig opentelemetry_config_;
   std::unique_ptr<DynatraceSampler> sampler_;
 };
 

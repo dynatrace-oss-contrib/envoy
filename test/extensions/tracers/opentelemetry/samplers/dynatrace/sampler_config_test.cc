@@ -12,23 +12,23 @@ namespace OpenTelemetry {
 
 TEST(SamplerConfigTest, test) {
   SamplerConfig config;
-  config.parse("{\n \"threshold\" : 2000 \n }");
-  EXPECT_EQ(config.getThreshHold(), 2000u);
-  config.parse("{\n \"threshold\" : 10000 \n }");
-  EXPECT_EQ(config.getThreshHold(), 10000u);
+  config.parse("{\n \"rootSpansPerMinute\" : 2000 \n }");
+  EXPECT_EQ(config.getRootSpansPerMinute(), 2000u);
+  config.parse("{\n \"rootSpansPerMinute\" : 10000 \n }");
+  EXPECT_EQ(config.getRootSpansPerMinute(), 10000u);
 
   // unexpected json, default value should be used
   config.parse("{ }");
-  EXPECT_EQ(config.getThreshHold(), SamplerConfig::DEFAULT_THRESHOLD);
+  EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 
   config.parse("");
-  EXPECT_EQ(config.getThreshHold(), SamplerConfig::DEFAULT_THRESHOLD);
+  EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 
   config.parse("\\");
-  EXPECT_EQ(config.getThreshHold(), SamplerConfig::DEFAULT_THRESHOLD);
+  EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 
   config.parse(" { ");
-  EXPECT_EQ(config.getThreshHold(), SamplerConfig::DEFAULT_THRESHOLD);
+  EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 }
 
 } // namespace OpenTelemetry

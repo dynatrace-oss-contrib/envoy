@@ -24,10 +24,8 @@ public:
    * @param context A reference to the TracerFactoryContext.
    * @return SamplerSharedPtr
    */
-  SamplerSharedPtr
-  createSampler(const Protobuf::Message& config,
-                Server::Configuration::TracerFactoryContext& context,
-                const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config) override;
+  SamplerSharedPtr createSampler(const Protobuf::Message& config,
+                                 Server::Configuration::TracerFactoryContext& context) override;
 
   ProtobufTypes::MessagePtr createEmptyConfigProto() override {
     return std::make_unique<

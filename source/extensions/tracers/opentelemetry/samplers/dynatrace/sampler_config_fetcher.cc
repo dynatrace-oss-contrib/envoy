@@ -50,10 +50,7 @@ SamplerConfigFetcher::~SamplerConfigFetcher() {
 
 void SamplerConfigFetcher::onSuccess(const Http::AsyncClient::Request& /*request*/,
                                      Http::ResponseMessagePtr&& http_response) {
-  active_request_ = nullptr;
-  // TODO: should we re-enable timer after send() to avoid having the request duration added to the
-  // timer? If so, we would need a list containing the active requests (not a single pointer)
-  timer_->enableTimer(std::chrono::seconds(60));
+  onRequestDone();
   const auto response_code = Http::Utility::getResponseStatus(http_response->headers());
   if (response_code != enumToInt(Http::Code::OK)) {
     ENVOY_LOG(error, "SamplerConfigFetcher received a non-success status code: {}", response_code);
@@ -61,15 +58,21 @@ void SamplerConfigFetcher::onSuccess(const Http::AsyncClient::Request& /*request
     ENVOY_LOG(info, "SamplerConfigFetcher received success status code: {}", response_code);
     // TODO: parse respone
     // sampler_config_.parse(http_response->bodyAsString());
-    sampler_config_.parse("{\n \"threshold\" : 2000 \n }");
+    sampler_config_.parse("{\n \"rootSpansPerMinute\" : 2000 \n }");
   }
 }
 
 void SamplerConfigFetcher::onFailure(const Http::AsyncClient::Request& /*request*/,
                                      Http::AsyncClient::FailureReason reason) {
+  onRequestDone();
+  ENVOY_LOG(info, "The OTLP export request failed. Reason {}", enumToInt(reason));
+}
+
+void SamplerConfigFetcher::onRequestDone() {
+  // TODO: should we re-enable timer after send() to avoid having the request duration added to the
+  // timer? If so, we would need a list containing the active requests (not a single pointer)
   active_request_ = nullptr;
   timer_->enableTimer(std::chrono::seconds(60));
-  ENVOY_LOG(info, "The OTLP export request failed. Reason {}", enumToInt(reason));
 }
 
 } // namespace OpenTelemetry
