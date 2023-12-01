@@ -56,9 +56,7 @@ void SamplerConfigFetcher::onSuccess(const Http::AsyncClient::Request& /*request
     ENVOY_LOG(error, "SamplerConfigFetcher received a non-success status code: {}", response_code);
   } else {
     ENVOY_LOG(info, "SamplerConfigFetcher received success status code: {}", response_code);
-    // TODO: parse respone
-    // sampler_config_.parse(http_response->bodyAsString());
-    sampler_config_.parse("{\n \"rootSpansPerMinute\" : 2000 \n }");
+    sampler_config_.parse(http_response->bodyAsString());
   }
 }
 
