@@ -8,6 +8,9 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+static constexpr std::chrono::seconds INITIAL_TIMER_DURATION{10};
+static constexpr std::chrono::minutes TIMER_INTERVAL{5};
+
 SamplerConfigFetcher::SamplerConfigFetcher(Server::Configuration::TracerFactoryContext& context,
                                            const envoy::config::core::v3::HttpService& http_service)
     : cluster_manager_(context.serverFactoryContext().clusterManager()),
@@ -28,7 +31,7 @@ SamplerConfigFetcher::SamplerConfigFetcher(Server::Configuration::TracerFactoryC
       Http::RequestMessagePtr message = Http::Utility::prepareHeaders(http_service_.http_uri());
       // TODO: set path
       // message->headers().setPath("path/to/sampler/service");
-      message->headers().setReferenceMethod(Http::Headers::get().MethodValues.Post);
+      message->headers().setReferenceMethod(Http::Headers::get().MethodValues.Get);
       // Add all custom headers to the request.
       for (const auto& header_pair : parsed_headers_to_add_) {
         message->headers().setReference(header_pair.first, header_pair.second);
@@ -39,7 +42,7 @@ SamplerConfigFetcher::SamplerConfigFetcher(Server::Configuration::TracerFactoryC
     }
   });
 
-  timer_->enableTimer(std::chrono::seconds(10));
+  timer_->enableTimer(std::chrono::seconds(INITIAL_TIMER_DURATION));
 }
 
 SamplerConfigFetcher::~SamplerConfigFetcher() {
@@ -70,7 +73,7 @@ void SamplerConfigFetcher::onRequestDone() {
   // TODO: should we re-enable timer after send() to avoid having the request duration added to the
   // timer? If so, we would need a list containing the active requests (not a single pointer)
   active_request_ = nullptr;
-  timer_->enableTimer(std::chrono::seconds(60));
+  timer_->enableTimer(std::chrono::seconds(TIMER_INTERVAL));
 }
 
 } // namespace OpenTelemetry
