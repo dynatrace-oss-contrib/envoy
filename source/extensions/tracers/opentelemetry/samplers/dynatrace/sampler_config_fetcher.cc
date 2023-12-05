@@ -12,30 +12,24 @@ static constexpr std::chrono::seconds INITIAL_TIMER_DURATION{10};
 static constexpr std::chrono::minutes TIMER_INTERVAL{5};
 
 SamplerConfigFetcher::SamplerConfigFetcher(Server::Configuration::TracerFactoryContext& context,
-                                           const envoy::config::core::v3::HttpService& http_service)
-    : cluster_manager_(context.serverFactoryContext().clusterManager()),
-      http_service_(http_service), sampler_config_() {
-
-  for (const auto& header_value_option : http_service_.request_headers_to_add()) {
-    parsed_headers_to_add_.push_back({Http::LowerCaseString(header_value_option.header().key()),
-                                      header_value_option.header().value()});
-  }
+                                           const envoy::config::core::v3::HttpUri& http_uri,
+                                           const std::string& token)
+    : cluster_manager_(context.serverFactoryContext().clusterManager()), http_uri_(http_uri),
+      parsed_authorization_header_to_add_({Http::LowerCaseString("authorization"), token}),
+      sampler_config_() {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
-    const auto thread_local_cluster =
-        cluster_manager_.getThreadLocalCluster(http_service_.http_uri().cluster());
+    const auto thread_local_cluster = cluster_manager_.getThreadLocalCluster(http_uri_.cluster());
     if (thread_local_cluster == nullptr) {
       ENVOY_LOG(error, "SamplerConfigFetcher failed: [cluster = {}] is not configured",
-                http_service_.http_uri().cluster());
+                http_uri_.cluster());
     } else {
-      Http::RequestMessagePtr message = Http::Utility::prepareHeaders(http_service_.http_uri());
-      // TODO: set path
+      Http::RequestMessagePtr message = Http::Utility::prepareHeaders(http_uri_);
+      // TODO: set path once it is finalized in TI-8742
       // message->headers().setPath("path/to/sampler/service");
       message->headers().setReferenceMethod(Http::Headers::get().MethodValues.Get);
-      // Add all custom headers to the request.
-      for (const auto& header_pair : parsed_headers_to_add_) {
-        message->headers().setReference(header_pair.first, header_pair.second);
-      }
+      message->headers().setReference(parsed_authorization_header_to_add_.first,
+                                      parsed_authorization_header_to_add_.second);
       active_request_ = thread_local_cluster->httpAsyncClient().send(
           std::move(message), *this,
           Http::AsyncClient::RequestOptions().setTimeout(std::chrono::milliseconds(6000)));

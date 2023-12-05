@@ -33,7 +33,7 @@ DynatraceSampler::DynatraceSampler(
     Server::Configuration::TracerFactoryContext& context)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_),
-      sampler_config_fetcher_(context, config.http_service()), counter_(0) {}
+      sampler_config_fetcher_(context, config.http_uri(), config.token()), counter_(0) {}
 
 SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                               const std::string& /*trace_id*/,

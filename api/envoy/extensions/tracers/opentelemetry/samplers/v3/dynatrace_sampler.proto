@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package envoy.extensions.tracers.opentelemetry.samplers.v3;
 
-import "envoy/config/core/v3/http_service.proto";
+import "envoy/config/core/v3/http_uri.proto";
 
 import "udpa/annotations/status.proto";
 
@@ -20,5 +20,7 @@ message DynatraceSamplerConfig {
 
   string cluster_id = 2;
 
-  config.core.v3.HttpService http_service = 3;
+  config.core.v3.HttpUri http_uri = 3;
+
+  string token = 4;
 }

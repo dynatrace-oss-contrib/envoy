@@ -2,7 +2,7 @@
 #include <string>
 #include <utility>
 
-#include "envoy/config/core/v3/http_service.pb.h"
+#include "envoy/config/core/v3/http_uri.pb.h"
 
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampler_config.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampler_config_fetcher.h"
@@ -29,16 +29,11 @@ public:
       : request_(&tracerFactoryContext_.server_factory_context_.cluster_manager_
                       .thread_local_cluster_.async_client_) {
     const std::string yaml_string = R"EOF(
-      http_uri:
-        cluster: "cluster_name"
-        uri: "https://some-o11y.com/otlp/v1/traces"
-        timeout: 0.250s
-      request_headers_to_add:
-      - header:
-          key: "Authorization"
-          value: "auth-token"
+      cluster: "cluster_name"
+      uri: "https://some-o11y.com/otlp/v1/traces"
+      timeout: 0.250s
     )EOF";
-    TestUtility::loadFromYaml(yaml_string, http_service_);
+    TestUtility::loadFromYaml(yaml_string, http_uri_);
 
     ON_CALL(tracerFactoryContext_.server_factory_context_.cluster_manager_,
             getThreadLocalCluster(_))
@@ -52,7 +47,7 @@ public:
 
 protected:
   NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracerFactoryContext_;
-  envoy::config::core::v3::HttpService http_service_;
+  envoy::config::core::v3::HttpUri http_uri_;
   NiceMock<Event::MockTimer>* timer_;
   Http::MockAsyncClientRequest request_;
 };
@@ -62,13 +57,13 @@ TEST_F(SamplerConfigFetcherTest, TestRequestIsSent) {
   EXPECT_CALL(tracerFactoryContext_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
               send_(_, _, _));
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_service_);
+  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
 }
 
 // Test receiving a response with code 200 and valid json
 TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_service_);
+  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -81,7 +76,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
 
 // Test receiving a response with code 200 and unexpected json
 TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_service_);
+  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -95,7 +90,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
 
 // Test receiving a response with code != 200
 TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_service_);
+  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -109,7 +104,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
 
 // Test sending failed
 TEST_F(SamplerConfigFetcherTest, TestOnFailure) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_service_);
+  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
   configFetcher.onFailure(request_, Http::AsyncClient::FailureReason::Reset);
   EXPECT_EQ(configFetcher.getSamplerConfig().getRootSpansPerMinute(),

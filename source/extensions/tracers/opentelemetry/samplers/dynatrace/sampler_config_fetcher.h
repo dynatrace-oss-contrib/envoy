@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "envoy/config/core/v3/http_service.pb.h"
+#include "envoy/config/core/v3/http_uri.pb.h"
 #include "envoy/extensions/tracers/opentelemetry/samplers/v3/dynatrace_sampler.pb.h"
 #include "envoy/http/async_client.h"
 #include "envoy/http/message.h"
@@ -25,7 +26,7 @@ class SamplerConfigFetcher : public Logger::Loggable<Logger::Id::tracing>,
                              public Http::AsyncClient::Callbacks {
 public:
   SamplerConfigFetcher(Server::Configuration::TracerFactoryContext& context,
-                       const envoy::config::core::v3::HttpService& http_service);
+                       const envoy::config::core::v3::HttpUri& http_uri, const std::string& token);
 
   void onSuccess(const Http::AsyncClient::Request& request,
                  Http::ResponseMessagePtr&& response) override;
@@ -42,8 +43,8 @@ public:
 private:
   Event::TimerPtr timer_;
   Upstream::ClusterManager& cluster_manager_;
-  envoy::config::core::v3::HttpService http_service_;
-  std::vector<std::pair<const Http::LowerCaseString, const std::string>> parsed_headers_to_add_;
+  envoy::config::core::v3::HttpUri http_uri_;
+  std::pair<const Http::LowerCaseString, const std::string> parsed_authorization_header_to_add_;
   Http::AsyncClient::Request* active_request_{};
   SamplerConfig sampler_config_;
 
