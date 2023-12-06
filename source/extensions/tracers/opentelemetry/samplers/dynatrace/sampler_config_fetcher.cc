@@ -15,7 +15,8 @@ SamplerConfigFetcher::SamplerConfigFetcher(Server::Configuration::TracerFactoryC
                                            const envoy::config::core::v3::HttpUri& http_uri,
                                            const std::string& token)
     : cluster_manager_(context.serverFactoryContext().clusterManager()), http_uri_(http_uri),
-      parsed_authorization_header_to_add_({Http::LowerCaseString("authorization"), token}),
+      parsed_authorization_header_to_add_(
+          {Http::LowerCaseString("authorization"), absl::StrCat("Api-Token ", token)}),
       sampler_config_() {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
