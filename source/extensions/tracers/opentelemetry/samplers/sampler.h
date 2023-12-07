@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "envoy/common/optref.h"
+#include "envoy/config/trace/v3/opentelemetry.pb.h"
 #include "envoy/config/typed_config.h"
 #include "envoy/server/tracer_config.h"
 #include "envoy/tracing/trace_context.h"

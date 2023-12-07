@@ -29,6 +29,8 @@ envoy_extension_cc_test(
     srcs = [
         "dynatrace_sampler_test.cc",
         "dynatrace_tracestate_test.cc",
+        "sampler_config_fetcher_test.cc",
+        "sampler_config_test.cc",
         "tracestate_test.cc",
     ],
     extension_names = ["envoy.tracers.opentelemetry.samplers.dynatrace"],
@@ -36,6 +38,7 @@ envoy_extension_cc_test(
         "//source/extensions/tracers/opentelemetry/samplers/dynatrace:dynatrace_sampler_lib",
         "//test/mocks/server:tracer_factory_context_mocks",
         "//test/test_common:utility_lib",
+        "@envoy_api//envoy/config/core/v3:pkg_cc_proto",
         "@envoy_api//envoy/extensions/tracers/opentelemetry/samplers/v3:pkg_cc_proto",
     ],
 )
