@@ -6,6 +6,7 @@
 #include "source/common/common/logger.h"
 #include "source/common/config/datasource.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_tracestate.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampler_config_fetcher.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/tracestate.h"
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 
@@ -35,6 +36,7 @@ private:
   std::string tenant_id_;
   std::string cluster_id_;
   DtTracestateEntry dt_tracestate_entry_;
+  SamplerConfigFetcher sampler_config_fetcher_;
   std::atomic<uint32_t> counter_; // request counter for dummy sampling
   FW4Tag getFW4Tag(const Tracestate& tracestate);
 };
