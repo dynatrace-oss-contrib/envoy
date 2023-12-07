@@ -5,7 +5,6 @@
 
 #include "envoy/config/core/v3/http_service.pb.h"
 #include "envoy/config/core/v3/http_uri.pb.h"
-#include "envoy/extensions/tracers/opentelemetry/samplers/v3/dynatrace_sampler.pb.h"
 #include "envoy/http/async_client.h"
 #include "envoy/http/message.h"
 #include "envoy/server/tracer_config.h"
