@@ -30,7 +30,7 @@ public:
                       .thread_local_cluster_.async_client_) {
     const std::string yaml_string = R"EOF(
       cluster: "cluster_name"
-      uri: "https://some-o11y.com/otlp/v1/traces"
+      uri: "https://testhost.com/otlp/v1/traces"
       timeout: 0.250s
     )EOF";
     TestUtility::loadFromYaml(yaml_string, http_uri_);
@@ -52,12 +52,23 @@ protected:
   Http::MockAsyncClientRequest request_;
 };
 
+MATCHER_P(MessageMatcher, unusedArg, "") {
+  // prefix 'Api-Token' should be added to 'tokenval' set via SamplerConfigFetcher constructor
+  const Http::LowerCaseString auth{"authorization"};
+  return (arg->headers().get(auth)[0]->value().getStringView() == "Api-Token tokenval") &&
+         (arg->headers().get(Http::Headers::get().Path)[0]->value().getStringView() ==
+          "/otlp/v1/traces") &&
+         (arg->headers().get(Http::Headers::get().Host)[0]->value().getStringView() ==
+          "testhost.com") &&
+         (arg->headers().get(Http::Headers::get().Method)[0]->value().getStringView() == "GET");
+}
+
 // Test a request is sent if timer fires
 TEST_F(SamplerConfigFetcherTest, TestRequestIsSent) {
   EXPECT_CALL(tracerFactoryContext_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
-              send_(_, _, _));
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
+              send_(MessageMatcher("unused-but-machtes-requires-an-arg"), _, _));
+  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenval");
   timer_->invokeCallback();
 }
 
