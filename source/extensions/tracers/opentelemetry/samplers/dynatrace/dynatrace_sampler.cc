@@ -9,13 +9,26 @@
 #include "source/extensions/tracers/opentelemetry/span_context.h"
 #include "source/extensions/tracers/opentelemetry/trace_state.h"
 
+#include "absl/strings/str_cat.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
-static const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME =
-    "sampling_extrapolation_set_in_sampler";
+namespace {
+
+const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME = "sampling_extrapolation_set_in_sampler";
+
+std::string getSamplingKey(const Tracing::TraceContext& trace_context) {
+  const auto method = trace_context.method();
+  size_t query_offset = trace_context.path().find('?');
+  auto path = trace_context.path().substr(
+      0, query_offset != trace_context.path().npos ? query_offset : trace_context.path().size());
+  return absl::StrCat(method, "_", path);
+}
+
+} // namespace
 
 DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
@@ -48,10 +61,9 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     }
   } else { // make a sampling decision
 
-    {
+    if (trace_context.has_value()) {
       Thread::LockGuard lock(mutex_);
-      const std::string sampling_key(trace_context->path());
-      stream_summary_.offer(sampling_key);
+      stream_summary_.offer(getSamplingKey(trace_context.value()));
     }
     // this is just a demo, we sample every second request here
     uint32_t current_counter = ++counter_;
