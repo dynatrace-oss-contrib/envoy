@@ -21,14 +21,13 @@ DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
     Server::Configuration::TracerFactoryContext& context)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
-      dt_tracestate_key_(absl::StrCat(absl::string_view(config.tenant_id()), "-",
-                                      absl::string_view(config.cluster_id()), "@dt")),
-      sampler_config_fetcher_(context, config.http_uri(), config.token()), counter_(0) {}
+      dt_tracestate_entry_(tenant_id_, cluster_id_),
+      sampler_config_fetcher_(context, config.http_uri(), config.token()), stream_summary_(100), counter_(0) {}
 
 SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                               const std::string& /*trace_id*/,
                                               const std::string& /*name*/, OTelSpanKind /*kind*/,
-                                              OptRef<const Tracing::TraceContext> /*trace_context*/,
+                                              OptRef<const Tracing::TraceContext> trace_context,
                                               const std::vector<SpanContext>& /*links*/) {
 
   SamplingResult result;
@@ -48,6 +47,12 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
       result.tracestate = parent_context->tracestate();
     }
   } else { // make a sampling decision
+
+    {
+      Thread::LockGuard lock(mutex_);
+      const std::string sampling_key(trace_context->path());
+      stream_summary_.offer(sampling_key);
+    }
     // this is just a demo, we sample every second request here
     uint32_t current_counter = ++counter_;
     bool sample;

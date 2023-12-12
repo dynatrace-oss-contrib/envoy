@@ -4,8 +4,10 @@
 #include "envoy/server/factory_context.h"
 
 #include "source/common/common/logger.h"
+#include "source/common/common/thread.h"
 #include "source/common/config/datasource.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampler_config_fetcher.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/stream_summary.h"
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 
 namespace Envoy {
@@ -75,6 +77,8 @@ private:
   std::string cluster_id_;
   std::string dt_tracestate_key_;
   SamplerConfigFetcher sampler_config_fetcher_;
+  StreamSummary<std::string> stream_summary_;
+  Thread::MutexBasicLockable mutex_{};
   std::atomic<uint32_t> counter_; // request counter for dummy sampling
 };
 
