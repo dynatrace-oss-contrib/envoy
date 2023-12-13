@@ -5,6 +5,7 @@
 #include <list>
 
 #include "absl/container/flat_hash_map.h"
+#include "absl/status/status.h"
 #include "absl/types/optional.h"
 
 // port of https://github.com/fzakaria/space-saving/tree/master
@@ -76,13 +77,13 @@ private:
       counter_iter->bucket = bucketNext;
       bucketNext->children.splice(bucketNext->children.end(), bucket->children, counter_iter);
       elem = std::prev(bucketNext->children.end());
-      validate();
+      // validate();
     } else {
       auto bucketNew = buckets_.emplace(bucket, counter_iter->value);
       counter_iter->bucket = bucketNew;
       bucketNew->children.splice(bucketNew->children.end(), bucket->children, counter_iter);
       elem = std::prev(bucketNew->children.end());
-      validate();
+      // validate();
     }
     if (bucket->children.empty()) {
       buckets_.erase(bucket);
@@ -90,27 +91,21 @@ private:
     return elem;
   }
 
-  void validate() const {
+  absl::Status validate_internal() const {
     auto cache_copy = cache_;
     auto current_bucket = buckets_.begin();
     while (current_bucket != buckets_.end()) {
       auto prev = std::prev(current_bucket);
       if (prev != buckets_.end() && prev->value <= current_bucket->value) {
-        // throw std::runtime_error("buckets should be in descending order.");
-        // TODO
-        return;
+        return absl::InternalError("buckets should be in descending order.");
       }
       auto current_child = current_bucket->children.begin();
       while (current_child != current_bucket->children.end()) {
         if (current_child->bucket != current_bucket) {
-          // throw std::runtime_error("entry should point to its bucket.");
-          // TODO
-          return;
+          return absl::InternalError("entry should point to its bucket.");
         }
         if (current_child->value != current_bucket->value) {
-          // throw std::runtime_error("entry and bucket should have the same value.");
-          // TODO
-          return;
+          return absl::InternalError("entry and bucket should have the same value.");
         }
         if (current_child->item) {
           auto old_iter = cache_copy.find(*current_child->item);
@@ -123,10 +118,12 @@ private:
       current_bucket++;
     }
     if (!cache_copy.empty()) {
-      // throw std::runtime_error("there should be no dead cached entries.");
-      // TODO
-      return;
+      return absl::InternalError("there should be no dead cached entries.");
     }
+    if (cache_.size() > capacity_) {
+      return absl::InternalError("cache size must not exceed capacity");
+    }
+    return absl::OkStatus();
   }
 
 public:
@@ -134,26 +131,22 @@ public:
     auto& newBucket = buckets_.emplace_back(0);
     for (size_t i = 0; i < capacity; ++i) {
       newBucket.children.emplace_back(buckets_.begin());
-      newBucket.children.emplace_back(buckets_.begin());
     }
-    validate();
+    // validate();
   }
 
   size_t getCapacity() const { return capacity_; }
 
-  Counter<T> offer(T const& item, const uint64_t increment = 1) {
-    // TODO
-    // if (cache_.size() > capacity_) {
-    //   throw std::runtime_error("Capacity of the cache should be bounded.");
-    // }
+  absl::Status validate() const { return validate_internal(); }
 
-    validate();
+  Counter<T> offer(T const& item, const uint64_t increment = 1) {
+    // validate();
 
     ++n_;
     auto iter = cache_.find(item);
     if (iter != cache_.end()) {
       iter->second = incrementCounter(iter->second, increment);
-      validate();
+      // validate();
       return *iter->second;
     } else {
       auto minElement = std::prev(buckets_.back().children.end());
@@ -173,7 +166,7 @@ public:
       if (cache_.size() <= capacity_) {
         minElement->error = originalMinValue;
       }
-      validate();
+      // validate();
       return *minElement;
     }
   }
@@ -215,7 +208,7 @@ public:
         bucket_iter = prev;
       }
     }
-    validate();
+    // validate();
   }
 };
 
