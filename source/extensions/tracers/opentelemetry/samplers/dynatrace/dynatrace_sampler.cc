@@ -35,7 +35,19 @@ DynatraceSampler::DynatraceSampler(
     Server::Configuration::TracerFactoryContext& context)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_),
-      sampler_config_fetcher_(context, config.http_uri(), config.token()), stream_summary_(100), counter_(0) {}
+      sampler_config_fetcher_(context, config.http_uri(), config.token()), stream_summary_(100),
+      counter_(0) {
+
+  timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
+    auto topK = stream_summary_.getTopK();
+    ENVOY_LOG(info, "Hello from sampler timer. topk.size(): {}", topK.size());
+    for (auto const& counter : topK) {
+      ENVOY_LOG(info, "-- {} : {}", counter.getItem(), counter.getValue());
+    }
+    timer_->enableTimer(std::chrono::seconds(20));
+  });
+  timer_->enableTimer(std::chrono::seconds(10));
+}
 
 SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> parent_context,
                                               const std::string& /*trace_id*/,
@@ -65,6 +77,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
       Thread::LockGuard lock(mutex_);
       stream_summary_.offer(getSamplingKey(trace_context.value()));
     }
+
     // this is just a demo, we sample every second request here
     uint32_t current_counter = ++counter_;
     bool sample;

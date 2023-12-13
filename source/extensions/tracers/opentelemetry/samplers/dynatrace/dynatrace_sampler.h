@@ -79,6 +79,7 @@ private:
   SamplerConfigFetcher sampler_config_fetcher_;
   StreamSummary<std::string> stream_summary_;
   Thread::MutexBasicLockable mutex_{};
+  Event::TimerPtr timer_;
   std::atomic<uint32_t> counter_; // request counter for dummy sampling
 };
 
