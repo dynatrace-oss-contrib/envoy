@@ -91,9 +91,10 @@ private:
     return elem;
   }
 
-  absl::Status validate_internal() const {
+  absl::Status validateInternal() const {
     auto cache_copy = cache_;
     auto current_bucket = buckets_.begin();
+    uint64_t value_sum = 0;
     while (current_bucket != buckets_.end()) {
       auto prev = std::prev(current_bucket);
       if (prev != buckets_.end() && prev->value <= current_bucket->value) {
@@ -113,6 +114,7 @@ private:
             cache_copy.erase(old_iter);
           }
         }
+        value_sum += current_child->value;
         current_child++;
       }
       current_bucket++;
@@ -122,6 +124,9 @@ private:
     }
     if (cache_.size() > capacity_) {
       return absl::InternalError("cache size must not exceed capacity");
+    }
+    if (value_sum != n_) {
+      return absl::InternalError("sum of all counter->value() must be equal to n");
     }
     return absl::OkStatus();
   }
@@ -137,7 +142,7 @@ public:
 
   size_t getCapacity() const { return capacity_; }
 
-  absl::Status validate() const { return validate_internal(); }
+  absl::Status validate() const { return validateInternal(); }
 
   Counter<T> offer(T const& item, const uint64_t increment = 1) {
     // validate();
@@ -161,6 +166,9 @@ public:
       minElement->item = item;
       minElement = incrementCounter(minElement, increment);
       cache_[item] = minElement;
+      // TODO: I think the following comment and `if (cache_.size() <= capacity_)` do not make
+      // sense.
+      // TODO: cache_.size() has to be <= capacity!
       // if we aren't full on capacity yet, we don't need to add error since we have seen every item
       // so far
       if (cache_.size() <= capacity_) {
