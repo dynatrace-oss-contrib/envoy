@@ -20,11 +20,10 @@ namespace {
 
 const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME = "sampling_extrapolation_set_in_sampler";
 
-std::string getSamplingKey(const Tracing::TraceContext& trace_context) {
-  const auto method = trace_context.method();
-  size_t query_offset = trace_context.path().find('?');
-  auto path = trace_context.path().substr(
-      0, query_offset != trace_context.path().npos ? query_offset : trace_context.path().size());
+std::string getSamplingKey(const absl::string_view path_query, const absl::string_view method) {
+  size_t query_offset = path_query.find('?');
+  auto path =
+      path_query.substr(0, query_offset != path_query.npos ? query_offset : path_query.size());
   return absl::StrCat(method, "_", path);
 }
 
@@ -36,7 +35,7 @@ DynatraceSampler::DynatraceSampler(
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_),
       sampler_config_fetcher_(context, config.http_uri(), config.token()), stream_summary_(100),
-      counter_(0) {
+      sampling_controller_(), counter_(0) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     auto topK = stream_summary_.getTopK();
@@ -45,6 +44,9 @@ DynatraceSampler::DynatraceSampler(
       ENVOY_LOG(info, "-- {} : {}", counter.getItem(), counter.getValue());
     }
     timer_->enableTimer(std::chrono::seconds(20));
+    auto n = stream_summary_.getN();
+    sampling_controller_.update(topK, n,
+                                sampler_config_fetcher_.getSamplerConfig().getRootSpansPerMinute());
   });
   timer_->enableTimer(std::chrono::seconds(10));
 }
@@ -75,7 +77,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
 
     if (trace_context.has_value()) {
       Thread::LockGuard lock(mutex_);
-      stream_summary_.offer(getSamplingKey(trace_context.value()));
+      stream_summary_.offer(getSamplingKey(trace_context->path(), trace_context->method()));
     }
 
     // this is just a demo, we sample every second request here

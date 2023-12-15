@@ -7,6 +7,7 @@
 #include "source/common/common/thread.h"
 #include "source/common/config/datasource.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampler_config_fetcher.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampling_controller.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/stream_summary.h"
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 
@@ -80,6 +81,7 @@ private:
   StreamSummary<std::string> stream_summary_;
   Thread::MutexBasicLockable mutex_{};
   Event::TimerPtr timer_;
+  SamplingController sampling_controller_;
   std::atomic<uint32_t> counter_; // request counter for dummy sampling
 };
 

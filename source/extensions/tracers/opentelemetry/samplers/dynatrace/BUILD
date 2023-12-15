@@ -31,6 +31,7 @@ envoy_cc_library(
         "dynatrace_sampler.h",
         "sampler_config.h",
         "sampler_config_fetcher.h",
+        "sampling_controller.h",
         "stream_summary.h",
     ],
     deps = [
