@@ -44,8 +44,7 @@ DynatraceSampler::DynatraceSampler(
       ENVOY_LOG(info, "-- {} : {}", counter.getItem(), counter.getValue());
     }
     timer_->enableTimer(std::chrono::seconds(20));
-    auto n = stream_summary_.getN();
-    sampling_controller_.update(topK, n,
+    sampling_controller_.update(topK,
                                 sampler_config_fetcher_.getSamplerConfig().getRootSpansPerMinute());
   });
   timer_->enableTimer(std::chrono::seconds(10));

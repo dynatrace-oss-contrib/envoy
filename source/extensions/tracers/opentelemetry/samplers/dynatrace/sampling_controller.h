@@ -17,6 +17,7 @@ struct SamplingState {
   [[nodiscard]] uint32_t getExponent() const { return exponent_; }
   [[nodiscard]] uint32_t getMultiplicity() const { return toMultiplicity(exponent_); }
   void increaseExponent() { exponent_++; }
+  void decreaseExponent() { exponent_--; }
 };
 
 class SamplingController {
@@ -36,24 +37,24 @@ public:
     return cnt;
   }
 
-  void update(const std::list<Counter<std::string>>& top_k, const uint64_t total_requests,
-              const uint64_t total_wanted) {
-    (void)total_requests;
-    (void)total_wanted;
+  void update(const std::list<Counter<std::string>>& top_k, const uint64_t total_wanted) {
 
     sampling_exponents_.clear();
     // const double top_k_size = top_k.size();
     for (auto const& counter : top_k) {
       sampling_exponents_[counter.getItem()] = {0};
     }
-    auto effect_count = computeEffectiveCount(top_k, sampling_exponents_);
+    auto effective_count = computeEffectiveCount(top_k, sampling_exponents_);
 
-    while (effect_count > total_wanted) {
+    while (effective_count > total_wanted) {
       for (auto const& counter : top_k) {
         auto sampling_state = sampling_exponents_.find(counter.getItem());
         sampling_state->second.increaseExponent();
-        effect_count = computeEffectiveCount(top_k, sampling_exponents_);
-        if (effect_count < total_wanted) {
+        effective_count = computeEffectiveCount(top_k, sampling_exponents_);
+        if (effective_count <= total_wanted) {
+          // we want to be close to total_wanted, but we don't want less than total_wanted samples.
+          // Therefore, we decrease the exponent again to keep effective_count > total_wanted
+          sampling_state->second.decreaseExponent();
           break;
         }
       }
