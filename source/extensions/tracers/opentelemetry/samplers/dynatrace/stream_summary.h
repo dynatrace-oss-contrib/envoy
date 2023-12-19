@@ -132,7 +132,7 @@ private:
   }
 
 public:
-  StreamSummary(const size_t capacity) : capacity_(capacity) {
+  explicit StreamSummary(const size_t capacity) : capacity_(capacity) {
     auto& newBucket = buckets_.emplace_back(0);
     for (size_t i = 0; i < capacity; ++i) {
       newBucket.children.emplace_back(buckets_.begin());

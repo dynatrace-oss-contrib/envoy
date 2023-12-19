@@ -82,7 +82,7 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithTraceparentAndTracestate) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;1;0,key=value", tracestate_value);
+  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;0,key=value", tracestate_value);
 }
 
 // Sends a request with traceparent but no tracestate header.
@@ -110,7 +110,7 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithTraceparentOnly) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;1;0", tracestate_value);
+  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;0", tracestate_value);
 }
 
 // Sends a request without traceparent and tracestate header.
@@ -133,7 +133,7 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithoutTraceparentAndTracestate) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;1;0", tracestate_value);
+  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;0", tracestate_value);
 }
 
 } // namespace

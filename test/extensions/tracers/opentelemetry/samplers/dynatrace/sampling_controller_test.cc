@@ -44,23 +44,73 @@ TEST_F(SamplingControllerTest, TestSimple) {
   SamplingController sc;
   sc.update(summary.getTopK(), 100);
 
-  auto ex = sc.getSamplingExponents();
-  EXPECT_EQ(ex["GET_asdf"].getExponent(), 2);
-  EXPECT_EQ(ex["GET_asdf"].getMultiplicity(), 4);
-  EXPECT_EQ(ex["POST_asdf"].getExponent(), 2);
-  EXPECT_EQ(ex["POST_asdf"].getMultiplicity(), 4);
-  EXPECT_EQ(ex["GET_xxxx"].getExponent(), 3);
-  EXPECT_EQ(ex["GET_xxxx"].getMultiplicity(), 8);
+  EXPECT_EQ(sc.getSamplingState("GET_asdf").getExponent(), 2);
+  EXPECT_EQ(sc.getSamplingState("GET_asdf").getMultiplicity(), 4);
+  EXPECT_EQ(sc.getSamplingState("POST_asdf").getExponent(), 2);
+  EXPECT_EQ(sc.getSamplingState("POST_asdf").getMultiplicity(), 4);
+  EXPECT_EQ(sc.getSamplingState("GET_xxxx").getExponent(), 3);
+  EXPECT_EQ(sc.getSamplingState("GET_xxxx").getMultiplicity(), 8);
 
   // total_wanted > number of requests
   sc.update(summary.getTopK(), 1000);
-  ex = sc.getSamplingExponents();
-  EXPECT_EQ(ex["GET_asdf"].getExponent(), 0);
-  EXPECT_EQ(ex["GET_asdf"].getMultiplicity(), 1);
-  EXPECT_EQ(ex["POST_asdf"].getExponent(), 0);
-  EXPECT_EQ(ex["POST_asdf"].getMultiplicity(), 1);
-  EXPECT_EQ(ex["GET_xxxx"].getExponent(), 0);
-  EXPECT_EQ(ex["GET_xxxx"].getMultiplicity(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_asdf").getExponent(), 0);
+  EXPECT_EQ(sc.getSamplingState("GET_asdf").getMultiplicity(), 1);
+  EXPECT_EQ(sc.getSamplingState("POST_asdf").getExponent(), 0);
+  EXPECT_EQ(sc.getSamplingState("POST_asdf").getMultiplicity(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_xxxx").getExponent(), 0);
+  EXPECT_EQ(sc.getSamplingState("GET_xxxx").getMultiplicity(), 1);
+}
+
+TEST(SamplingStateTest, TestIncreaseDecrease) {
+  SamplingState sst{};
+  EXPECT_EQ(sst.getExponent(), 0);
+  EXPECT_EQ(sst.getMultiplicity(), 1);
+
+  sst.increaseExponent();
+  EXPECT_EQ(sst.getExponent(), 1);
+  EXPECT_EQ(sst.getMultiplicity(), 2);
+
+  sst.increaseExponent();
+  EXPECT_EQ(sst.getExponent(), 2);
+  EXPECT_EQ(sst.getMultiplicity(), 4);
+
+  for (int i = 0; i < 6; i++) {
+    sst.increaseExponent();
+  }
+  EXPECT_EQ(sst.getExponent(), 8);
+  EXPECT_EQ(sst.getMultiplicity(), 256);
+
+  sst.decreaseExponent();
+  EXPECT_EQ(sst.getExponent(), 7);
+  EXPECT_EQ(sst.getMultiplicity(), 128);
+}
+
+TEST(SamplingStateTest, TestShouldSample) {
+  // default sampling state should sample
+  SamplingState sst{};
+  EXPECT_TRUE(sst.shouldSample(1234));
+  EXPECT_TRUE(sst.shouldSample(3456));
+  EXPECT_TRUE(sst.shouldSample(12345));
+
+  // exponent 2, multiplicity 1, even (=not odd) random numbers should be sampled
+  sst.increaseExponent();
+  EXPECT_TRUE(sst.shouldSample(22));
+  EXPECT_TRUE(sst.shouldSample(4444444));
+  EXPECT_FALSE(sst.shouldSample(21));
+  EXPECT_FALSE(sst.shouldSample(111111));
+
+  for (int i = 0; i < 9; i++) {
+    sst.increaseExponent();
+  }
+  // exponent 10, multiplicity 1024,
+  EXPECT_TRUE(sst.shouldSample(1024));
+  EXPECT_TRUE(sst.shouldSample(2048));
+  EXPECT_TRUE(sst.shouldSample(4096));
+  EXPECT_TRUE(sst.shouldSample(10240000000));
+  EXPECT_FALSE(sst.shouldSample(1023));
+  EXPECT_FALSE(sst.shouldSample(1025));
+  EXPECT_FALSE(sst.shouldSample(2047));
+  EXPECT_FALSE(sst.shouldSample(2049));
 }
 
 } // namespace OpenTelemetry

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "envoy/extensions/tracers/opentelemetry/samplers/v3/dynatrace_sampler.pb.h"
 #include "envoy/server/factory_context.h"
 
@@ -78,7 +80,7 @@ private:
   std::string cluster_id_;
   std::string dt_tracestate_key_;
   SamplerConfigFetcher sampler_config_fetcher_;
-  StreamSummary<std::string> stream_summary_;
+  std::unique_ptr<StreamSummary<std::string>> stream_summary_;
   Thread::MutexBasicLockable mutex_{};
   Event::TimerPtr timer_;
   SamplingController sampling_controller_;
