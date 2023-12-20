@@ -5,6 +5,8 @@
 
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/stream_summary.h"
 
+#include "absl/synchronization/mutex.h"
+
 namespace Envoy {
 namespace Extensions {
 namespace Tracers {
@@ -57,12 +59,12 @@ public:
         }
       }
     }
-    // TODO: write_lock
-    sampling_exponents_ = new_sampling_exponents;
+    absl::WriterMutexLock lock{&mutex_};
+    sampling_exponents_ = std::move(new_sampling_exponents);
   }
 
-  SamplingState getSamplingState(const std::string& sampling_key) {
-    // TODO: read_lock
+  SamplingState getSamplingState(const std::string& sampling_key) const {
+    absl::ReaderMutexLock lock{&mutex_};
     auto iter = sampling_exponents_.find(sampling_key);
     if (iter ==
         sampling_exponents_
@@ -79,8 +81,9 @@ public:
 private:
   absl::flat_hash_map<std::string, SamplingState> sampling_exponents_;
   std::string rest_bucket_key_{};
+  mutable absl::Mutex mutex_{};
 
-  uint64_t
+  static uint64_t
   computeEffectiveCount(const std::list<Counter<std::string>>& top_k,
                         const absl::flat_hash_map<std::string, SamplingState>& sampling_exponents) {
     uint64_t cnt = 0;

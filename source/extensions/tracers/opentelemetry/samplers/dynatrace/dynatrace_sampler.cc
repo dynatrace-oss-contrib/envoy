@@ -45,19 +45,23 @@ DynatraceSampler::DynatraceSampler(
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     auto topK = stream_summary_->getTopK();
-    // start with a new stream summmary
-    stream_summary_ = std::make_unique<StreamSummary<std::string>>(100);
-
+    {
+      // create a new stream summmary for the next period
+      absl::MutexLock lock{&stream_summary_mutex_};
+      stream_summary_ = std::make_unique<StreamSummary<std::string>>(100);
+    }
+    // TODO: remove:
     ENVOY_LOG(info, "Hello from sampler timer. topk.size(): {}", topK.size());
     for (auto const& counter : topK) {
       ENVOY_LOG(info, "-- {} : {}", counter.getItem(), counter.getValue());
     }
     ENVOY_LOG(info, "counter_: {}", counter_);
 
-    timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
     // update sampling exponents
     sampling_controller_.update(topK,
                                 sampler_config_fetcher_.getSamplerConfig().getRootSpansPerMinute());
+
+    timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
   });
   timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
 }
@@ -76,7 +80,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
                                 : "";
 
   if (sampling_key != "") {
-    Thread::LockGuard lock(mutex_);
+    absl::MutexLock lock{&stream_summary_mutex_};
     stream_summary_->offer(sampling_key);
   }
 
@@ -97,7 +101,8 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
   } else { // make a sampling decision
 
     // this is just a demo, we sample every second request here
-    // uint32_t current_counter = ++counter_;
+    // uint32_t current_counter = counter_;
+    counter_++;
     bool sample;
     int sampling_exponent;
     // if (current_counter % 2) {
