@@ -20,16 +20,16 @@ namespace OpenTelemetry {
 
 class FW4Tag {
 public:
-  static FW4Tag createInvalid() { return {false, false, 0}; }
+  FW4Tag FW4Tag::createInvalid() { return {false, false, 0, 0}; }
 
-  static FW4Tag create(bool ignored, int sampling_exponent) {
-    return {true, ignored, sampling_exponent};
+  FW4Tag FW4Tag::create(bool ignored, int sampling_exponent, int root_path_random_) {
+    return {true, ignored, sampling_exponent, root_path_random_};
   }
 
-  static FW4Tag create(const std::string& value) {
+  static FW4Tag FW4Tag::create(const std::string& value) {
     std::vector<absl::string_view> tracestate_components =
         absl::StrSplit(value, ';', absl::AllowEmpty());
-    if (tracestate_components.size() < 7) {
+    if (tracestate_components.size() < 8) {
       return createInvalid();
     }
 
@@ -38,11 +38,14 @@ public:
     }
     bool ignored = tracestate_components[5] == "1";
     int sampling_exponent = std::stoi(std::string(tracestate_components[6]));
-    return {true, ignored, sampling_exponent};
+    int root_path_random = std::stoi(std::string(tracestate_components[7]), nullptr, 16);
+    return {true, ignored, sampling_exponent, root_path_random};
   }
 
-  std::string asString() const {
-    return absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_, ";0");
+  std::string FW4Tag::asString() const {
+    std::string ret = absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_, ";",
+                                  absl::Hex(root_path_random_));
+    return ret;
   }
 
   bool isValid() const { return valid_; };

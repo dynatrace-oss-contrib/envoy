@@ -44,7 +44,9 @@ TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
-  EXPECT_STREQ(sampling_result.tracestate.c_str(), "9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;0");
+  // EXPECT_TRUE(absl::StartsWith(sampling_result.tracestate,
+  // "9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;")) << "Received tracestate: " << tracestate_value;
+  EXPECT_STREQ(sampling_result.tracestate.c_str(), "9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;f1");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }

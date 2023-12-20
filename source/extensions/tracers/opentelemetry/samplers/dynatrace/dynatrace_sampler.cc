@@ -119,7 +119,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
 
     result.decision = sample ? Decision::RecordAndSample : Decision::Drop;
     // create new forward tag and add it to tracestate
-    FW4Tag new_tag = FW4Tag::create(!sample, sampling_exponent);
+    FW4Tag new_tag = FW4Tag::create(!sample, sampling_exponent, static_cast<uint8_t>(hash));
     trace_state = trace_state->set(dt_tracestate_key_, new_tag.asString());
     result.tracestate = trace_state->toHeader();
   }
