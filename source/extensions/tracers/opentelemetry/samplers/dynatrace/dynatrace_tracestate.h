@@ -10,11 +10,14 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+// dynatrace trace state entry will be:
+// <tenantID>-<clusterID>@dt=fw4;0;0;0;0;<isIgnored>;<sampling_exponent>;<pathInfo>
+
 class FW4Tag {
 public:
   static FW4Tag createInvalid();
 
-  static FW4Tag create(bool ignored, int sampling_exponent, int root_path_random_);
+  static FW4Tag create(bool ignored, uint32_t sampling_exponent, uint32_t root_path_random_);
 
   static FW4Tag create(const std::string& value);
 
@@ -22,20 +25,20 @@ public:
 
   bool isValid() const { return valid_; };
   bool isIgnored() const { return ignored_; };
-  int getSamplingExponent() const { return sampling_exponent_; };
+  uint32_t getSamplingExponent() const { return sampling_exponent_; };
+  uint32_t getPathInfo() const { return path_info_; };
 
 private:
-  FW4Tag(bool valid, bool ignored, int sampling_exponent, int root_path_random_)
+  FW4Tag(bool valid, bool ignored, uint32_t sampling_exponent, uint32_t path_info)
       : valid_(valid), ignored_(ignored), sampling_exponent_(sampling_exponent),
-        root_path_random_(root_path_random_) {}
+        path_info_(path_info) {}
 
   bool valid_;
   bool ignored_;
-  int sampling_exponent_;
-  int root_path_random_;
+  uint32_t sampling_exponent_;
+  uint32_t path_info_;
 };
 
-// <tenantID>-<clusterID>@dt=fw4;0;0;0;0;<isIgnored>;<sampling_exponent>;<rootPathRandom>
 class DtTracestateEntry {
 public:
   DtTracestateEntry(const std::string& tenant_id, const std::string& cluster_id) {
