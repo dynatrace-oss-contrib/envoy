@@ -34,6 +34,11 @@ const char* dt_tracestate_ignored_different_tenant =
 
 } // namespace
 
+class MockSamplerConfigFetcher : public SamplerConfigFetcher {
+public:
+  MOCK_METHOD(const SamplerConfig&, getSamplerConfig, (), (const override));
+};
+
 class DynatraceSamplerTest : public testing::Test {
 
   const std::string yaml_string_ = R"EOF(
@@ -45,7 +50,9 @@ public:
   DynatraceSamplerTest() {
     TestUtility::loadFromYaml(yaml_string_, config_);
     NiceMock<Server::Configuration::MockTracerFactoryContext> context;
-    sampler_ = std::make_unique<DynatraceSampler>(config_, context);
+
+    SamplerConfigFetcherPtr cf = std::make_unique<MockSamplerConfigFetcher>();
+    sampler_ = std::make_unique<DynatraceSampler>(config_, context, std::move(cf));
     EXPECT_STREQ(sampler_->getDescription().c_str(), "DynatraceSampler");
   }
 

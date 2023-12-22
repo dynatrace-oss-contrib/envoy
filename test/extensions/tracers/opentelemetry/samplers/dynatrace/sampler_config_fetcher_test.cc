@@ -68,13 +68,13 @@ TEST_F(SamplerConfigFetcherTest, TestRequestIsSent) {
   EXPECT_CALL(tracerFactoryContext_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
               send_(MessageMatcher("unused-but-machtes-requires-an-arg"), _, _));
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenval");
+  SamplerConfigFetcherImpl configFetcher(tracerFactoryContext_, http_uri_, "tokenval");
   timer_->invokeCallback();
 }
 
 // Test receiving a response with code 200 and valid json
 TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -87,7 +87,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
 
 // Test receiving a response with code 200 and unexpected json
 TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -101,7 +101,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
 
 // Test receiving a response with code != 200
 TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -115,7 +115,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
 
 // Test sending failed
 TEST_F(SamplerConfigFetcherTest, TestOnFailure) {
-  SamplerConfigFetcher configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
   timer_->invokeCallback();
   configFetcher.onFailure(request_, Http::AsyncClient::FailureReason::Reset);
   EXPECT_EQ(configFetcher.getSamplerConfig().getRootSpansPerMinute(),

@@ -1,5 +1,7 @@
 #include "config.h"
 
+#include <memory>
+
 #include "envoy/extensions/tracers/opentelemetry/samplers/v3/dynatrace_sampler.pb.validate.h"
 
 #include "source/common/config/utility.h"
@@ -16,11 +18,14 @@ DynatraceSamplerFactory::createSampler(const Protobuf::Message& config,
                                        Server::Configuration::TracerFactoryContext& context) {
   auto mptr = Envoy::Config::Utility::translateAnyToFactoryConfig(
       dynamic_cast<const ProtobufWkt::Any&>(config), context.messageValidationVisitor(), *this);
-  return std::make_shared<DynatraceSampler>(
-      MessageUtil::downcastAndValidate<
-          const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig&>(
-          *mptr, context.messageValidationVisitor()),
-      context);
+
+  const auto& proto_config = MessageUtil::downcastAndValidate<
+      const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig&>(
+      *mptr, context.messageValidationVisitor());
+
+  SamplerConfigFetcherPtr cf = std::make_unique<SamplerConfigFetcherImpl>(
+      context, proto_config.http_uri(), proto_config.token());
+  return std::make_shared<DynatraceSampler>(proto_config, context, std::move(cf));
 }
 
 /**

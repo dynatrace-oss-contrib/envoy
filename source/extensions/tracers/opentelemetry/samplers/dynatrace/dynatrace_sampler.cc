@@ -36,10 +36,11 @@ std::string getSamplingKey(const absl::string_view path_query, const absl::strin
 
 DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
-    Server::Configuration::TracerFactoryContext& context)
+    Server::Configuration::TracerFactoryContext& context,
+    SamplerConfigFetcherPtr sampler_config_fetcher)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_),
-      sampler_config_fetcher_(context, config.http_uri(), config.token()),
+      sampler_config_fetcher_(std::move(sampler_config_fetcher)),
       stream_summary_(std::make_unique<StreamSummary<std::string>>(100)), sampling_controller_(),
       counter_(0) {
 
@@ -58,8 +59,8 @@ DynatraceSampler::DynatraceSampler(
     ENVOY_LOG(info, "counter_: {}", counter_);
 
     // update sampling exponents
-    sampling_controller_.update(topK,
-                                sampler_config_fetcher_.getSamplerConfig().getRootSpansPerMinute());
+    sampling_controller_.update(
+        topK, sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute());
 
     timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
   });

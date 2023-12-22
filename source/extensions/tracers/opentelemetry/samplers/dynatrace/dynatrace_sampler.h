@@ -69,7 +69,8 @@ class DynatraceSampler : public Sampler, Logger::Loggable<Logger::Id::tracing> {
 public:
   DynatraceSampler(
       const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
-      Server::Configuration::TracerFactoryContext& context);
+      Server::Configuration::TracerFactoryContext& context,
+      SamplerConfigFetcherPtr sampler_config_fetcher);
 
   SamplingResult shouldSample(const absl::optional<SpanContext> parent_context,
                               const std::string& trace_id, const std::string& name,
@@ -82,8 +83,9 @@ public:
 private:
   std::string tenant_id_;
   std::string cluster_id_;
+
   std::string dt_tracestate_key_;
-  SamplerConfigFetcher sampler_config_fetcher_;
+  SamplerConfigFetcherPtr sampler_config_fetcher_;
   std::unique_ptr<StreamSummary<std::string>> stream_summary_;
   mutable absl::Mutex stream_summary_mutex_{};
   Event::TimerPtr timer_;
