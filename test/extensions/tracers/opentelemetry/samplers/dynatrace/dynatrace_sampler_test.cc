@@ -47,6 +47,7 @@ class DynatraceSamplerTest : public testing::Test {
   )EOF";
 
 public:
+<<<<<<< HEAD
   DynatraceSamplerTest() {
     TestUtility::loadFromYaml(yaml_string_, config_);
     NiceMock<Server::Configuration::MockTracerFactoryContext> context;
@@ -55,14 +56,26 @@ public:
     sampler_ = std::make_unique<DynatraceSampler>(config_, context, std::move(cf));
     EXPECT_STREQ(sampler_->getDescription().c_str(), "DynatraceSampler");
   }
+=======
+  DynatraceSamplerTest() { TestUtility::loadFromYaml(yaml_string, config_); }
+>>>>>>> 2705f51fef (extend test)
 
 protected:
+  NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracerFactoryContext_;
   envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config_;
-  std::unique_ptr<DynatraceSampler> sampler_;
 };
+
+TEST_F(DynatraceSamplerTest, TestGetDescription) {
+  auto scf = std::make_unique<MockSamplerConfigFetcher>();
+  DynatraceSampler sampler(config_, tracerFactoryContext_, std::move(scf));
+  EXPECT_STREQ(sampler.getDescription().c_str(), "DynatraceSampler");
+}
 
 // Verify sampler being invoked with no parent span context
 TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
+  auto scf = std::make_unique<MockSamplerConfigFetcher>();
+  DynatraceSampler sampler(config_, tracerFactoryContext_, std::move(scf));
+
   auto sampling_result =
       sampler_->shouldSample(absl::nullopt, trace_id, "operation_name",
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
@@ -89,6 +102,72 @@ TEST_F(DynatraceSamplerTest, TestWithParentContext) {
                "ot=foo:bar,9712ad40-980df25c@dt=fw4;0;0;0;0;0;1;0");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
+}
+
+TEST_F(DynatraceSamplerTest, TestSampling) {
+  auto scf = std::make_unique<MockSamplerConfigFetcher>();
+
+  SamplerConfig config;
+  // config should allow 200 root spans per minute
+  config.parse("{\n \"rootSpansPerMinute\" : 200 \n }");
+
+  EXPECT_CALL(*scf, getSamplerConfig()).WillRepeatedly(testing::ReturnRef(config));
+
+  auto timer =
+      new NiceMock<Event::MockTimer>(&tracerFactoryContext_.server_factory_context_.dispatcher_);
+  ON_CALL(tracerFactoryContext_.server_factory_context_.dispatcher_, createTimer_(_))
+      .WillByDefault(Invoke([timer](Event::TimerCb) { return timer; }));
+
+  DynatraceSampler sampler(config_, tracerFactoryContext_, std::move(scf));
+  Tracing::TestTraceContextImpl trace_context_1{};
+  trace_context_1.context_method_ = "GET";
+  trace_context_1.context_path_ = "/path";
+  Tracing::TestTraceContextImpl trace_context_2{};
+  trace_context_2.context_method_ = "POST";
+  trace_context_2.context_path_ = "/path";
+  Tracing::TestTraceContextImpl trace_context_3{};
+  trace_context_3.context_method_ = "POST";
+  trace_context_3.context_path_ = "/another_path";
+
+  // send  requests
+  for (int i = 0; i < 180; i++) {
+    sampler.shouldSample({}, trace_id, "operation_name",
+                         ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, trace_context_1,
+                         {});
+    sampler.shouldSample({}, trace_id, "operation_name",
+                         ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, trace_context_2,
+                         {});
+  }
+
+  sampler.shouldSample({}, trace_id, "operation_name",
+                       ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, trace_context_3,
+                       {});
+
+  // sampler should read update sampling exponents
+  timer->invokeCallback();
+
+  // the sampler should not sample every span for 'trace_context_1'
+  // we call it again 10 times. This should be enough to get at least one ignored span
+  // 'i' is used as 'random trace_id'
+  bool ignored = false;
+  for (int i = 0; i < 10; i++) {
+    auto result = sampler.shouldSample({}, std::to_string(i), "operation_name",
+                                       ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER,
+                                       trace_context_1, {});
+    if (!result.isSampled()) {
+      ignored = true;
+      break;
+    }
+  }
+  EXPECT_TRUE(ignored);
+
+  // trace_context_3 should be sampled
+  for (int i = 0; i < 10; i++) {
+    auto result = sampler.shouldSample({}, std::to_string(i), "operation_name",
+                                       ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER,
+                                       trace_context_2, {});
+    EXPECT_TRUE(result.isSampled());
+  }
 }
 
 } // namespace OpenTelemetry

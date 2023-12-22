@@ -45,23 +45,7 @@ DynatraceSampler::DynatraceSampler(
       counter_(0) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
-    auto topK = stream_summary_->getTopK();
-    {
-      // create a new stream summmary for the next period
-      absl::MutexLock lock{&stream_summary_mutex_};
-      stream_summary_ = std::make_unique<StreamSummary<std::string>>(100);
-    }
-    // TODO: remove:
-    ENVOY_LOG(info, "Hello from sampler timer. topk.size(): {}", topK.size());
-    for (auto const& counter : topK) {
-      ENVOY_LOG(info, "-- {} : {}", counter.getItem(), counter.getValue());
-    }
-    ENVOY_LOG(info, "counter_: {}", counter_);
-
-    // update sampling exponents
-    sampling_controller_.update(
-        topK, sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute());
-
+    updateSamplingInfo();
     timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
   });
   timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
@@ -80,7 +64,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
       trace_context.has_value() ? getSamplingKey(trace_context->path(), trace_context->method())
                                 : "";
 
-  if (sampling_key != "") {
+  if (!sampling_key.empty()) {
     absl::MutexLock lock{&stream_summary_mutex_};
     stream_summary_->offer(sampling_key);
   }
@@ -134,6 +118,25 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     result.attributes = std::make_unique<const std::map<std::string, std::string>>(std::move(att));
   }
   return result;
+}
+
+void DynatraceSampler::updateSamplingInfo() {
+  auto topK = stream_summary_->getTopK();
+  {
+    // create a new stream summmary for the next period
+    absl::MutexLock lock{&stream_summary_mutex_};
+    stream_summary_ = std::make_unique<StreamSummary<std::string>>(100);
+  }
+  // TODO: remove:
+  ENVOY_LOG(error, "Hello from sampler timer. topk.size(): {}", topK.size());
+  for (auto const& counter : topK) {
+    ENVOY_LOG(error, "-- {} : {}", counter.getItem(), counter.getValue());
+  }
+  ENVOY_LOG(info, "counter_: {}", counter_);
+
+  // update sampling exponents
+  sampling_controller_.update(topK,
+                              sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute());
 }
 
 std::string DynatraceSampler::getDescription() const { return "DynatraceSampler"; }

@@ -33,7 +33,7 @@ private:
 class SamplingController {
 
 public:
-  void update(const std::list<Counter<std::string>>& top_k, const uint64_t total_wanted) {
+  void update(const std::list<Counter<std::string>>& top_k, const uint32_t total_wanted) {
 
     absl::flat_hash_map<std::string, SamplingState> new_sampling_exponents;
     // start with sampling exponent 0, which means multiplicity == 1 (every span is sampled)

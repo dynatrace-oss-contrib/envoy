@@ -91,6 +91,7 @@ private:
   Event::TimerPtr timer_;
   SamplingController sampling_controller_;
   std::atomic<uint32_t> counter_; // request counter for dummy sampling
+  void updateSamplingInfo();
 };
 
 } // namespace OpenTelemetry

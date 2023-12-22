@@ -66,8 +66,6 @@ void SamplerConfigFetcherImpl::onFailure(const Http::AsyncClient::Request& /*req
 }
 
 void SamplerConfigFetcherImpl::onRequestDone() {
-  // TODO: should we re-enable timer after send() to avoid having the request duration added to the
-  // timer? If so, we would need a list containing the active requests (not a single pointer)
   active_request_ = nullptr;
   timer_->enableTimer(std::chrono::seconds(TIMER_INTERVAL));
 }

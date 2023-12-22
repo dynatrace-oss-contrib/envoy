@@ -14,7 +14,7 @@ namespace OpenTelemetry {
 
 class SamplerConfig {
 public:
-  static constexpr uint64_t ROOT_SPANS_PER_MINUTE_DEFAULT = 1000;
+  static constexpr uint32_t ROOT_SPANS_PER_MINUTE_DEFAULT = 1000;
 
   void parse(const std::string& json) {
     auto result = Envoy::Json::Factory::loadFromStringNoThrow(json);
@@ -31,10 +31,10 @@ public:
     root_spans_per_minute_.store(ROOT_SPANS_PER_MINUTE_DEFAULT);
   }
 
-  uint64_t getRootSpansPerMinute() const { return root_spans_per_minute_.load(); }
+  uint32_t getRootSpansPerMinute() const { return root_spans_per_minute_.load(); }
 
 private:
-  std::atomic<uint64_t> root_spans_per_minute_ = ROOT_SPANS_PER_MINUTE_DEFAULT;
+  std::atomic<uint32_t> root_spans_per_minute_ = ROOT_SPANS_PER_MINUTE_DEFAULT;
 };
 
 } // namespace OpenTelemetry
