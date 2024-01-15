@@ -17,11 +17,11 @@ public:
   static constexpr uint32_t ROOT_SPANS_PER_MINUTE_DEFAULT = 1000;
 
   void parse(const std::string& json) {
-    auto result = Envoy::Json::Factory::loadFromStringNoThrow(json);
+    const auto result = Envoy::Json::Factory::loadFromStringNoThrow(json);
     if (result.ok()) {
-      auto obj = result.value();
+      const auto obj = result.value();
       if (obj->hasObject("rootSpansPerMinute")) {
-        auto value = obj->getInteger("rootSpansPerMinute", ROOT_SPANS_PER_MINUTE_DEFAULT);
+        const auto value = obj->getInteger("rootSpansPerMinute", ROOT_SPANS_PER_MINUTE_DEFAULT);
         root_spans_per_minute_.store(value);
         return;
       }

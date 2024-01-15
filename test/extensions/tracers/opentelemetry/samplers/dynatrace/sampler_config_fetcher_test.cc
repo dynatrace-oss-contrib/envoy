@@ -123,6 +123,24 @@ TEST_F(SamplerConfigFetcherTest, TestOnFailure) {
   EXPECT_TRUE(timer_->enabled());
 }
 
+// Test calling onBeforeFinalizeUpstreamSpan
+TEST_F(SamplerConfigFetcherTest, TestOnBeforeFinalizeUpstreamSpan) {
+  Tracing::MockSpan child_span_;
+  SamplerConfigFetcherImpl configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
+  // onBeforeFinalizeUpstreamSpan() is an empty method, nothing should happen
+  configFetcher.onBeforeFinalizeUpstreamSpan(child_span_, nullptr);
+}
+
+// Test invoking the timer if no cluster can be found
+TEST_F(SamplerConfigFetcherTest, TestNoCluster) {
+  // simulate no configured cluster, return nullptr.
+  ON_CALL(tracerFactoryContext_.server_factory_context_.cluster_manager_, getThreadLocalCluster(_))
+      .WillByDefault(Return(nullptr));
+  SamplerConfigFetcherImpl configFetcher(tracerFactoryContext_, http_uri_, "tokenXASSD");
+  timer_->invokeCallback();
+  // should not crash or throw.
+}
+
 } // namespace OpenTelemetry
 } // namespace Tracers
 } // namespace Extensions

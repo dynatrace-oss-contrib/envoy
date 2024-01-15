@@ -63,7 +63,7 @@ private:
 };
 
 /**
- * @brief A Dynatrace specific sampler *
+ * @brief A Dynatrace specific sampler
  */
 class DynatraceSampler : public Sampler, Logger::Loggable<Logger::Id::tracing> {
 public:

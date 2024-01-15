@@ -20,6 +20,7 @@ namespace OpenTelemetry {
 
 namespace {
 
+// TODO: should be one minute
 static constexpr std::chrono::seconds SAMPLING_UPDATE_TIMER_DURATION{20};
 // static constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
 
@@ -84,19 +85,9 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
       result.tracestate = parent_context->tracestate();
     }
   } else { // make a sampling decision
-
-    // this is just a demo, we sample every second request here
-    // uint32_t current_counter = counter_;
     counter_++;
     bool sample;
     int sampling_exponent;
-    // if (current_counter % 2) {
-    //   sample = true;
-    //   sampling_exponent = 1;
-    // } else {
-    //   sample = false;
-    //   sampling_exponent = 0;
-    // }
 
     // do a decision based on the calculated exponent
     // at the moment we use a hash of the trace_id as random number

@@ -60,6 +60,25 @@ TEST_F(SamplingControllerTest, TestSimple) {
   EXPECT_EQ(sc.getSamplingState("GET_xxxx").getMultiplicity(), 1);
 }
 
+TEST_F(SamplingControllerTest, TestEmpty) {
+  StreamSummary<std::string> summary(10);
+  SamplingController sc;
+  sc.update(summary.getTopK(), 100);
+
+  EXPECT_EQ(sc.getSamplingState("GET_something").getExponent(), 0);
+  EXPECT_EQ(sc.getSamplingState("GET_something").getMultiplicity(), 1);
+}
+
+TEST_F(SamplingControllerTest, TestNonExisting) {
+  StreamSummary<std::string> summary(10);
+  summary.offer("key1");
+  SamplingController sc;
+  sc.update(summary.getTopK(), 100);
+
+  EXPECT_EQ(sc.getSamplingState("key2").getExponent(), 0);
+  EXPECT_EQ(sc.getSamplingState("key2").getMultiplicity(), 1);
+}
+
 TEST(SamplingStateTest, TestIncreaseDecrease) {
   SamplingState sst{};
   EXPECT_EQ(sst.getExponent(), 0);
