@@ -42,8 +42,8 @@ DynatraceSampler::DynatraceSampler(
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_),
       sampler_config_fetcher_(std::move(sampler_config_fetcher)),
-      stream_summary_(std::make_unique<StreamSummary<std::string>>(100)), sampling_controller_(),
-      counter_(0) {
+      stream_summary_(std::make_unique<StreamSummary<std::string>>(STREAM_SUMMARY_SIZE)),
+      sampling_controller_(), counter_(0) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     updateSamplingInfo();
@@ -61,6 +61,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
   SamplingResult result;
   std::map<std::string, std::string> att;
 
+  // trace_context->path() returns path and query. query part is removed in getSamplingKey()
   const std::string sampling_key =
       trace_context.has_value() ? getSamplingKey(trace_context->path(), trace_context->method())
                                 : "";
@@ -112,22 +113,23 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
 }
 
 void DynatraceSampler::updateSamplingInfo() {
+  absl::MutexLock lock{&stream_summary_mutex_};
   auto topK = stream_summary_->getTopK();
-  {
-    // create a new stream summmary for the next period
-    absl::MutexLock lock{&stream_summary_mutex_};
-    stream_summary_ = std::make_unique<StreamSummary<std::string>>(100);
-  }
-  // TODO: remove:
-  ENVOY_LOG(error, "Hello from sampler timer. topk.size(): {}", topK.size());
+  auto last_period_count = stream_summary_->getN();
+
+  // TODO: remove or convert to debug
+  ENVOY_LOG(info, "Hello from sampler timer. topk.size(): {}", last_period_count, topK.size());
   for (auto const& counter : topK) {
-    ENVOY_LOG(error, "-- {} : {}", counter.getItem(), counter.getValue());
+    ENVOY_LOG(info, "-- {} : {}", counter.getItem(), counter.getValue());
   }
   ENVOY_LOG(info, "counter_: {}", counter_);
 
   // update sampling exponents
-  sampling_controller_.update(topK,
+  sampling_controller_.update(topK, last_period_count,
                               sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute());
+  // Note: getTopK() returns references to values in StreamSummary.
+  // Do not destroy it while topK is used!
+  stream_summary_ = std::make_unique<StreamSummary<std::string>>(STREAM_SUMMARY_SIZE);
 }
 
 std::string DynatraceSampler::getDescription() const { return "DynatraceSampler"; }

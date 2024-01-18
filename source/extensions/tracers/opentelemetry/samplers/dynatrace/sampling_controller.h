@@ -33,8 +33,11 @@ private:
 class SamplingController {
 
 public:
-  void update(const std::list<Counter<std::string>>& top_k, const uint32_t total_wanted) {
+  void update(const std::list<Counter<std::string>>& top_k, uint64_t last_period_count,
+              const uint32_t total_wanted) {
 
+    // TODO: remove parameter
+    (void)last_period_count;
     absl::flat_hash_map<std::string, SamplingState> new_sampling_exponents;
     // start with sampling exponent 0, which means multiplicity == 1 (every span is sampled)
     for (auto const& counter : top_k) {
@@ -44,21 +47,8 @@ public:
     // use the last entry as "rest bucket", which is used for new/unknown requests
     rest_bucket_key_ = (top_k.size() > 0) ? top_k.back().getItem() : "";
 
-    auto effective_count = computeEffectiveCount(top_k, new_sampling_exponents);
+    calculateSamplingExponents(top_k, total_wanted, new_sampling_exponents);
 
-    while (effective_count > total_wanted) {
-      for (auto const& counter : top_k) {
-        auto sampling_state = new_sampling_exponents.find(counter.getItem());
-        sampling_state->second.increaseExponent();
-        effective_count = computeEffectiveCount(top_k, new_sampling_exponents);
-        if (effective_count <= total_wanted) {
-          // we want to be close to total_wanted, but we don't want less than total_wanted samples.
-          // Therefore, we decrease the exponent again to keep effective_count > total_wanted
-          sampling_state->second.decreaseExponent();
-          break;
-        }
-      }
-    }
     absl::WriterMutexLock lock{&mutex_};
     sampling_exponents_ = std::move(new_sampling_exponents);
   }
@@ -78,6 +68,11 @@ public:
     return iter->second;
   }
 
+  uint64_t getEffectiveCount(const std::list<Counter<std::string>>& top_k) {
+    absl::ReaderMutexLock lock{&mutex_};
+    return computeEffectiveCount(top_k, sampling_exponents_);
+  }
+
 private:
   absl::flat_hash_map<std::string, SamplingState> sampling_exponents_;
   std::string rest_bucket_key_{};
@@ -92,9 +87,60 @@ private:
       if (sampling_state == sampling_exponents.end()) {
         continue;
       }
-      cnt += counter.getValue() / sampling_state->second.getMultiplicity();
+      auto counterVal = counter.getValue();
+      auto mul = sampling_state->second.getMultiplicity();
+      auto res = counterVal / mul;
+      cnt += res;
     }
     return cnt;
+  }
+
+  void calculateSamplingExponents(
+      const std::list<Counter<std::string>>& top_k, const uint32_t total_wanted,
+      absl::flat_hash_map<std::string, SamplingState>& new_sampling_exponents) {
+    const auto top_k_size = top_k.size();
+    if (top_k_size == 0 || total_wanted == 0) {
+      return;
+    }
+
+    // number of requests which are allowed for every entry
+    const uint32_t allowed_per_entry = total_wanted / top_k_size; // requests which are allowed
+
+    for (auto& counter : top_k) {
+      // allowed multiplicity for this entry
+      auto wanted_multiplicity = counter.getValue() / allowed_per_entry;
+      if (wanted_multiplicity < 0) {
+        wanted_multiplicity = 1;
+      }
+      auto sampling_state = new_sampling_exponents.find(counter.getItem());
+      // sampling exponent has to be a power of 2. Find the exponent to have multiplicity near to
+      // wanted_multiplicity
+      while (wanted_multiplicity > sampling_state->second.getMultiplicity()) {
+        sampling_state->second.increaseExponent();
+      }
+      if (wanted_multiplicity < sampling_state->second.getMultiplicity()) {
+        // we want to have multiplicity <= wanted_multiplicity, therefore exponent is decrease once.
+        sampling_state->second.decreaseExponent();
+      }
+    }
+
+    auto effective_count = computeEffectiveCount(top_k, new_sampling_exponents);
+    // There might be entries where allowed_per_entry is greater than their count.
+    // Therefore, we would sample nubmer of total_wanted requests
+    // To avoid this, we decrease the exponent of other entries if possible
+    if (effective_count < total_wanted) {
+      for (int i = 0; i < 5; i++) { // max tries
+        for (auto reverse_it = top_k.rbegin(); reverse_it != top_k.rend();
+             ++reverse_it) { // start with lowest frequency
+          auto rev_sampling_state = new_sampling_exponents.find(reverse_it->getItem());
+          rev_sampling_state->second.decreaseExponent();
+          effective_count = computeEffectiveCount(top_k, new_sampling_exponents);
+          if (effective_count >= total_wanted) { // we are done
+            return;
+          }
+        }
+      }
+    }
   }
 };
 

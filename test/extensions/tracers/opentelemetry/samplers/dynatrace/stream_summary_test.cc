@@ -93,7 +93,6 @@ TEST(StreamSummaryTest, TestExtendCapacity) {
     CompareCounter(it, 'a', 4, 0, __LINE__);
     CompareCounter(++it, 'b', 3, 0, __LINE__);
     CompareCounter(++it, 'c', 3, 1, __LINE__);
-    std::cout << __LINE__ << ": " << toString(summary.getTopK()) << std::endl;
   }
 
   // add item 'e', 'c' should be removed.

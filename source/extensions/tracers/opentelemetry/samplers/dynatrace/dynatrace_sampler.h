@@ -80,6 +80,8 @@ public:
 
   std::string getDescription() const override;
 
+  static constexpr size_t STREAM_SUMMARY_SIZE{100};
+
 private:
   std::string tenant_id_;
   std::string cluster_id_;
