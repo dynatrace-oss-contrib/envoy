@@ -77,6 +77,7 @@ private:
   absl::flat_hash_map<std::string, SamplingState> sampling_exponents_;
   std::string rest_bucket_key_{};
   mutable absl::Mutex mutex_{};
+  static constexpr uint32_t MAX_EXPONENT = (1 << 4) - 1; // 15
 
   static uint64_t
   computeEffectiveCount(const std::list<Counter<std::string>>& top_k,
@@ -115,7 +116,8 @@ private:
       auto sampling_state = new_sampling_exponents.find(counter.getItem());
       // sampling exponent has to be a power of 2. Find the exponent to have multiplicity near to
       // wanted_multiplicity
-      while (wanted_multiplicity > sampling_state->second.getMultiplicity()) {
+      while (wanted_multiplicity > sampling_state->second.getMultiplicity() &&
+             sampling_state->second.getExponent() < MAX_EXPONENT) {
         sampling_state->second.increaseExponent();
       }
       if (wanted_multiplicity < sampling_state->second.getMultiplicity()) {
