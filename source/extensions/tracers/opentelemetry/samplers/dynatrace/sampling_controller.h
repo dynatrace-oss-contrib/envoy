@@ -30,15 +30,15 @@ private:
   uint32_t exponent_{};
 };
 
-class SamplingController {
+using StreamSummaryT = StreamSummary<std::string>;
+using TopKListT = std::list<Counter<std::string>>;
+
+class SamplingController : public Logger::Loggable<Logger::Id::tracing> {
 
 public:
-  void update(const std::list<Counter<std::string>>& top_k, uint64_t last_period_count,
-              const uint32_t total_wanted) {
+  void update(const TopKListT& top_k, uint64_t last_period_count, const uint32_t total_wanted) {
 
-    // TODO: remove parameter
-    (void)last_period_count;
-    absl::flat_hash_map<std::string, SamplingState> new_sampling_exponents;
+    SamplingExponentsT new_sampling_exponents;
     // start with sampling exponent 0, which means multiplicity == 1 (every span is sampled)
     for (auto const& counter : top_k) {
       new_sampling_exponents[counter.getItem()] = {};
@@ -48,6 +48,7 @@ public:
     rest_bucket_key_ = (top_k.size() > 0) ? top_k.back().getItem() : "";
 
     calculateSamplingExponents(top_k, total_wanted, new_sampling_exponents);
+    debug_log(top_k, new_sampling_exponents, last_period_count, total_wanted);
 
     absl::WriterMutexLock lock{&mutex_};
     sampling_exponents_ = std::move(new_sampling_exponents);
@@ -68,20 +69,31 @@ public:
     return iter->second;
   }
 
-  uint64_t getEffectiveCount(const std::list<Counter<std::string>>& top_k) {
+  uint64_t getEffectiveCount(const TopKListT& top_k) {
     absl::ReaderMutexLock lock{&mutex_};
     return computeEffectiveCount(top_k, sampling_exponents_);
   }
 
 private:
-  absl::flat_hash_map<std::string, SamplingState> sampling_exponents_;
+  using SamplingExponentsT = absl::flat_hash_map<std::string, SamplingState>;
+  SamplingExponentsT sampling_exponents_;
   std::string rest_bucket_key_{};
   mutable absl::Mutex mutex_{};
   static constexpr uint32_t MAX_EXPONENT = (1 << 4) - 1; // 15
 
-  static uint64_t
-  computeEffectiveCount(const std::list<Counter<std::string>>& top_k,
-                        const absl::flat_hash_map<std::string, SamplingState>& sampling_exponents) {
+  void debug_log(const TopKListT& top_k, const SamplingExponentsT& new_sampling_exponents,
+                 uint64_t last_period_count, const uint32_t total_wanted) {
+    ENVOY_LOG(debug,
+              "Updating sampling info. top_k.size(): {}, last_period_count: {}, total_wanted: {}",
+              top_k.size(), last_period_count, total_wanted);
+    for (auto const& counter : top_k) {
+      auto sampling_state = new_sampling_exponents.find(counter.getItem());
+      ENVOY_LOG(debug, "- {}: value: {}, exponent: {}", counter.getItem(), counter.getValue(),
+                sampling_state->second.getExponent());
+    }
+  }
+  static uint64_t computeEffectiveCount(const TopKListT& top_k,
+                                        const SamplingExponentsT& sampling_exponents) {
     uint64_t cnt = 0;
     for (auto const& counter : top_k) {
       auto sampling_state = sampling_exponents.find(counter.getItem());
@@ -96,9 +108,8 @@ private:
     return cnt;
   }
 
-  void calculateSamplingExponents(
-      const std::list<Counter<std::string>>& top_k, const uint32_t total_wanted,
-      absl::flat_hash_map<std::string, SamplingState>& new_sampling_exponents) {
+  void calculateSamplingExponents(const TopKListT& top_k, const uint32_t total_wanted,
+                                  SamplingExponentsT& new_sampling_exponents) {
     const auto top_k_size = top_k.size();
     if (top_k_size == 0 || total_wanted == 0) {
       return;

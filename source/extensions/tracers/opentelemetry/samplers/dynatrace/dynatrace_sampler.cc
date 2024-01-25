@@ -42,8 +42,8 @@ DynatraceSampler::DynatraceSampler(
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_),
       sampler_config_fetcher_(std::move(sampler_config_fetcher)),
-      stream_summary_(std::make_unique<StreamSummary<std::string>>(STREAM_SUMMARY_SIZE)),
-      sampling_controller_(), counter_(0) {
+      stream_summary_(std::make_unique<StreamSummaryT>(STREAM_SUMMARY_SIZE)),
+      sampling_controller_() {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     updateSamplingInfo();
@@ -86,7 +86,6 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
       result.tracestate = parent_context->tracestate();
     }
   } else { // make a sampling decision
-    counter_++;
     bool sample;
     int sampling_exponent;
 
@@ -114,22 +113,15 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
 
 void DynatraceSampler::updateSamplingInfo() {
   absl::MutexLock lock{&stream_summary_mutex_};
-  auto topK = stream_summary_->getTopK();
+  auto top_k = stream_summary_->getTopK();
   auto last_period_count = stream_summary_->getN();
 
-  // TODO: remove or convert to debug
-  ENVOY_LOG(info, "Hello from sampler timer. topk.size(): {}", last_period_count, topK.size());
-  for (auto const& counter : topK) {
-    ENVOY_LOG(info, "-- {} : {}", counter.getItem(), counter.getValue());
-  }
-  ENVOY_LOG(info, "counter_: {}", counter_);
-
   // update sampling exponents
-  sampling_controller_.update(topK, last_period_count,
+  sampling_controller_.update(top_k, last_period_count,
                               sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute());
   // Note: getTopK() returns references to values in StreamSummary.
-  // Do not destroy it while topK is used!
-  stream_summary_ = std::make_unique<StreamSummary<std::string>>(STREAM_SUMMARY_SIZE);
+  // Do not destroy it while top_k is used!
+  stream_summary_ = std::make_unique<StreamSummaryT>(STREAM_SUMMARY_SIZE);
 }
 
 std::string DynatraceSampler::getDescription() const { return "DynatraceSampler"; }

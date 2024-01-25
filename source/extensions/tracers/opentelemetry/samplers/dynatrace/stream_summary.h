@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <list>
 
+#include "source/common/common/assert.h"
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
@@ -69,21 +71,19 @@ private:
   typename detail::CounterIterator<T> incrementCounter(detail::CounterIterator<T> counter_iter,
                                                        const uint64_t increment) {
     auto const bucket = counter_iter->bucket;
-    auto bucketNext = std::prev(bucket);
+    auto bucket_next = std::prev(bucket);
     counter_iter->value += increment;
 
     detail::CounterIterator<T> elem;
-    if (bucketNext != buckets_.end() && counter_iter->value == bucketNext->value) {
-      counter_iter->bucket = bucketNext;
-      bucketNext->children.splice(bucketNext->children.end(), bucket->children, counter_iter);
-      elem = std::prev(bucketNext->children.end());
-      // validate();
+    if (bucket_next != buckets_.end() && counter_iter->value == bucket_next->value) {
+      counter_iter->bucket = bucket_next;
+      bucket_next->children.splice(bucket_next->children.end(), bucket->children, counter_iter);
+      elem = std::prev(bucket_next->children.end());
     } else {
-      auto bucketNew = buckets_.emplace(bucket, counter_iter->value);
-      counter_iter->bucket = bucketNew;
-      bucketNew->children.splice(bucketNew->children.end(), bucket->children, counter_iter);
-      elem = std::prev(bucketNew->children.end());
-      // validate();
+      auto bucket_new = buckets_.emplace(bucket, counter_iter->value);
+      counter_iter->bucket = bucket_new;
+      bucket_new->children.splice(bucket_new->children.end(), bucket->children, counter_iter);
+      elem = std::prev(bucket_new->children.end());
     }
     if (bucket->children.empty()) {
       buckets_.erase(bucket);
@@ -131,13 +131,20 @@ private:
     return absl::OkStatus();
   }
 
+  inline void validateDbg() {
+#if !defined(NDEBUG)
+    ASSERT(validate().ok());
+#endif
+  }
+
 public:
   explicit StreamSummary(const size_t capacity) : capacity_(capacity) {
-    auto& newBucket = buckets_.emplace_back(0);
+    auto& new_bucket = buckets_.emplace_back(0);
     for (size_t i = 0; i < capacity; ++i) {
-      newBucket.children.emplace_back(buckets_.begin());
+      // initialize with empty counters, optional item will not be set
+      new_bucket.children.emplace_back(buckets_.begin());
     }
-    // validate();
+    validateDbg();
   }
 
   size_t getCapacity() const { return capacity_; }
@@ -145,37 +152,33 @@ public:
   absl::Status validate() const { return validateInternal(); }
 
   Counter<T> offer(T const& item, const uint64_t increment = 1) {
-    // validate();
-
     ++n_;
     auto iter = cache_.find(item);
     if (iter != cache_.end()) {
       iter->second = incrementCounter(iter->second, increment);
-      // validate();
+      validateDbg();
       return *iter->second;
     } else {
-      auto minElement = std::prev(buckets_.back().children.end());
-      auto originalMinValue = minElement->value;
-      if (minElement->item) {
+      auto min_element = std::prev(buckets_.back().children.end());
+      auto original_min_value = min_element->value;
+      if (min_element
+              ->item) { // element was already used (otherwise optional item would be not set)
         // remove old from cache
-        auto old_iter = cache_.find(*minElement->item);
+        auto old_iter = cache_.find(*min_element->item);
         if (old_iter != cache_.end()) {
           cache_.erase(old_iter);
         }
       }
-      minElement->item = item;
-      minElement = incrementCounter(minElement, increment);
-      cache_[item] = minElement;
-      // TODO: I think the following comment and `if (cache_.size() <= capacity_)` do not make
-      // sense.
-      // TODO: cache_.size() has to be <= capacity!
-      // if we aren't full on capacity yet, we don't need to add error since we have seen every item
-      // so far
+      min_element->item = item;
+      min_element = incrementCounter(min_element, increment);
+      cache_[item] = min_element;
       if (cache_.size() <= capacity_) {
-        minElement->error = originalMinValue;
+        // should always be true, but keep it to be aligned to reference implementation
+        // originalMinValue will be 0 if element wasn't already used
+        min_element->error = original_min_value;
       }
-      // validate();
-      return *minElement;
+      validateDbg();
+      return *min_element;
     }
   }
 
@@ -194,29 +197,6 @@ public:
       }
     }
     return r;
-  }
-
-  // this makes using the error somewhat useless
-  void scaleDown(const float factor) {
-    n_ = 0;
-    for (auto bucket_iter = buckets_.begin(); bucket_iter != buckets_.end(); bucket_iter++) {
-      bucket_iter->value = std::max<float>(bucket_iter->value / factor, 1.);
-      for (auto& child : bucket_iter->children) {
-        child.value = std::max<float>(child.value / factor, 1.);
-        n_ += child.value;
-        child.error /= factor;
-      }
-      auto prev = std::prev(bucket_iter);
-      if (prev != buckets_.end() && prev->value == bucket_iter->value) {
-        std::for_each(bucket_iter->children.begin(), bucket_iter->children.end(),
-                      [&prev](detail::Counter<T>& c) { c.bucket = prev; });
-        prev->children.splice(prev->children.end(), bucket_iter->children,
-                              bucket_iter->children.begin(), bucket_iter->children.end());
-        buckets_.erase(bucket_iter);
-        bucket_iter = prev;
-      }
-    }
-    // validate();
   }
 };
 

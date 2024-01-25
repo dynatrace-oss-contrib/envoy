@@ -61,20 +61,20 @@ public:
 >>>>>>> 2705f51fef (extend test)
 
 protected:
-  NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracerFactoryContext_;
+  NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracer_factory_context_;
   envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig config_;
 };
 
 TEST_F(DynatraceSamplerTest, TestGetDescription) {
   auto scf = std::make_unique<MockSamplerConfigFetcher>();
-  DynatraceSampler sampler(config_, tracerFactoryContext_, std::move(scf));
+  DynatraceSampler sampler(config_, tracer_factory_context_, std::move(scf));
   EXPECT_STREQ(sampler.getDescription().c_str(), "DynatraceSampler");
 }
 
 // Verify sampler being invoked with no parent span context
 TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
   auto scf = std::make_unique<MockSamplerConfigFetcher>();
-  DynatraceSampler sampler(config_, tracerFactoryContext_, std::move(scf));
+  DynatraceSampler sampler(config_, tracer_factory_context_, std::move(scf));
 
   auto sampling_result =
       sampler_->shouldSample(absl::nullopt, trace_id, "operation_name",
@@ -114,11 +114,11 @@ TEST_F(DynatraceSamplerTest, TestSampling) {
   EXPECT_CALL(*scf, getSamplerConfig()).WillRepeatedly(testing::ReturnRef(config));
 
   auto timer =
-      new NiceMock<Event::MockTimer>(&tracerFactoryContext_.server_factory_context_.dispatcher_);
-  ON_CALL(tracerFactoryContext_.server_factory_context_.dispatcher_, createTimer_(_))
+      new NiceMock<Event::MockTimer>(&tracer_factory_context_.server_factory_context_.dispatcher_);
+  ON_CALL(tracer_factory_context_.server_factory_context_.dispatcher_, createTimer_(_))
       .WillByDefault(Invoke([timer](Event::TimerCb) { return timer; }));
 
-  DynatraceSampler sampler(config_, tracerFactoryContext_, std::move(scf));
+  DynatraceSampler sampler(config_, tracer_factory_context_, std::move(scf));
   Tracing::TestTraceContextImpl trace_context_1{};
   trace_context_1.context_method_ = "GET";
   trace_context_1.context_path_ = "/path";

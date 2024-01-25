@@ -88,11 +88,11 @@ private:
 
   std::string dt_tracestate_key_;
   SamplerConfigFetcherPtr sampler_config_fetcher_;
-  std::unique_ptr<StreamSummary<std::string>> stream_summary_;
+  std::unique_ptr<StreamSummaryT> stream_summary_;
   mutable absl::Mutex stream_summary_mutex_{};
   Event::TimerPtr timer_;
   SamplingController sampling_controller_;
-  std::atomic<uint32_t> counter_; // request counter for dummy sampling
+
   void updateSamplingInfo();
 };
 

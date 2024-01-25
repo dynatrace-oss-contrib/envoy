@@ -51,11 +51,10 @@ void SamplerConfigFetcherImpl::onSuccess(const Http::AsyncClient::Request& /*req
   onRequestDone();
   const auto response_code = Http::Utility::getResponseStatus(http_response->headers());
   if (response_code == enumToInt(Http::Code::OK)) {
-    // TODO: remove log
-    ENVOY_LOG(info, "SamplerConfigFetcherImpl received success status code: {}", response_code);
+    ENVOY_LOG(debug, "SamplerConfigFetcherImpl received success status code: {}", response_code);
     sampler_config_.parse(http_response->bodyAsString());
   } else {
-    ENVOY_LOG(error, "SamplerConfigFetcherImpl received a non-success status code: {}",
+    ENVOY_LOG(warn, "SamplerConfigFetcherImpl received a non-success status code: {}",
               response_code);
   }
 }

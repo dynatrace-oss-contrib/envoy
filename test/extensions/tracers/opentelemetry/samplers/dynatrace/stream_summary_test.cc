@@ -32,9 +32,9 @@ void CompareCounter(typename std::list<Counter<T>>::iterator counter, T item, ui
 TEST(StreamSummaryTest, TestEmpty) {
   StreamSummary<std::string> summary(4);
   EXPECT_EQ(summary.getN(), 0);
-  auto topK = summary.getTopK();
-  EXPECT_EQ(topK.size(), 0);
-  EXPECT_EQ(topK.begin(), topK.end());
+  auto top_k = summary.getTopK();
+  EXPECT_EQ(top_k.size(), 0);
+  EXPECT_EQ(top_k.begin(), top_k.end());
   EXPECT_TRUE(summary.validate().ok());
 }
 
@@ -52,9 +52,9 @@ TEST(StreamSummaryTest, TestSimple) {
   EXPECT_TRUE(summary.validate().ok());
   EXPECT_EQ(summary.getN(), 8);
 
-  auto topK = summary.getTopK();
-  EXPECT_EQ(topK.size(), 4);
-  auto it = topK.begin();
+  auto top_k = summary.getTopK();
+  EXPECT_EQ(top_k.size(), 4);
+  auto it = top_k.begin();
   CompareCounter(it, 'a', 4, 0, __LINE__);
   CompareCounter(++it, 'b', 2, 0, __LINE__);
   CompareCounter(++it, 'c', 1, 0, __LINE__);
@@ -87,9 +87,9 @@ TEST(StreamSummaryTest, TestExtendCapacity) {
   EXPECT_TRUE(summary.validate().ok());
 
   {
-    auto topK = summary.getTopK();
-    auto it = topK.begin();
-    EXPECT_EQ(topK.size(), 3);
+    auto top_k = summary.getTopK();
+    auto it = top_k.begin();
+    EXPECT_EQ(top_k.size(), 3);
     CompareCounter(it, 'a', 4, 0, __LINE__);
     CompareCounter(++it, 'b', 3, 0, __LINE__);
     CompareCounter(++it, 'c', 3, 1, __LINE__);
@@ -98,9 +98,9 @@ TEST(StreamSummaryTest, TestExtendCapacity) {
   // add item 'e', 'c' should be removed.
   summary.offer('e');
   {
-    auto topK = summary.getTopK();
-    auto it = topK.begin();
-    EXPECT_EQ(topK.size(), 3);
+    auto top_k = summary.getTopK();
+    auto it = top_k.begin();
+    EXPECT_EQ(top_k.size(), 3);
     CompareCounter(it, 'a', 4, 0, __LINE__);
     CompareCounter(++it, 'e', 4, 3, __LINE__);
     CompareCounter(++it, 'b', 3, 0, __LINE__);
@@ -117,8 +117,8 @@ TEST(StreamSummaryTest, TestRandomInsertOrder) {
     for (auto const c : v) {
       summary.offer(c);
     }
-    auto topK = summary.getTopK();
-    auto it = topK.begin();
+    auto top_k = summary.getTopK();
+    auto it = top_k.begin();
     CompareCounter(it, 'a', 6, 0, __LINE__);
     CompareCounter(++it, 'b', 5, 0, __LINE__);
     CompareCounter(++it, 'c', 4, 0, __LINE__);

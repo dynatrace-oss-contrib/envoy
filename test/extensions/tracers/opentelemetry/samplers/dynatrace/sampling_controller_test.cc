@@ -19,7 +19,7 @@ namespace OpenTelemetry {
 
 namespace {
 
-void offerEntry(StreamSummary<std::string>& summary, const std::string& value, int count) {
+void offerEntry(StreamSummaryT& summary, const std::string& value, int count) {
   for (int i = 0; i < count; i++) {
     summary.offer(value);
   }
@@ -39,7 +39,7 @@ template <typename T> std::string toString(T const& list) {
 class SamplingControllerTest : public testing::Test {};
 
 TEST_F(SamplingControllerTest, TestManyDifferentRequests) {
-  StreamSummary<std::string> summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
+  StreamSummaryT summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
   offerEntry(summary, "1", 2000);
   offerEntry(summary, "2", 1000);
   offerEntry(summary, "3", 750);
@@ -66,7 +66,7 @@ TEST_F(SamplingControllerTest, TestManyDifferentRequests) {
 }
 
 TEST_F(SamplingControllerTest, TestManyRequests) {
-  StreamSummary<std::string> summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
+  StreamSummaryT summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
   offerEntry(summary, "1", 8600);
   offerEntry(summary, "2", 5000);
   offerEntry(summary, "3", 4000);
@@ -93,7 +93,7 @@ TEST_F(SamplingControllerTest, TestManyRequests) {
 }
 
 TEST_F(SamplingControllerTest, TestSomeRequests) {
-  StreamSummary<std::string> summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
+  StreamSummaryT summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
   offerEntry(summary, "1", 7500);
   offerEntry(summary, "2", 1000);
   offerEntry(summary, "3", 1);
@@ -119,7 +119,7 @@ TEST_F(SamplingControllerTest, TestSomeRequests) {
 }
 
 TEST_F(SamplingControllerTest, TestSimple) {
-  StreamSummary<std::string> summary(10);
+  StreamSummaryT summary(10);
   // offerEntry data
   offerEntry(summary, "GET_xxxx", 300);
   offerEntry(summary, "POST_asdf", 200);
@@ -150,7 +150,7 @@ TEST_F(SamplingControllerTest, TestSimple) {
 }
 
 TEST_F(SamplingControllerTest, TestEmpty) {
-  StreamSummary<std::string> summary(10);
+  StreamSummaryT summary(10);
   SamplingController sc;
   sc.update(summary.getTopK(), summary.getN(), 100);
 
@@ -159,7 +159,7 @@ TEST_F(SamplingControllerTest, TestEmpty) {
 }
 
 TEST_F(SamplingControllerTest, TestNonExisting) {
-  StreamSummary<std::string> summary(10);
+  StreamSummaryT summary(10);
   summary.offer("key1");
   SamplingController sc;
   sc.update(summary.getTopK(), summary.getN(), 100);
