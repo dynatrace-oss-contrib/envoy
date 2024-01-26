@@ -6,12 +6,17 @@
 
 #include "source/common/common/hash.h"
 #include "source/common/config/datasource.h"
+<<<<<<< HEAD
+=======
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_tracestate.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/stream_summary.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/tracestate.h"
+>>>>>>> b53b23ded4 (fix include paths, add a few const)
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 #include "source/extensions/tracers/opentelemetry/span_context.h"
 #include "source/extensions/tracers/opentelemetry/trace_state.h"
 
 #include "absl/strings/str_cat.h"
-#include "stream_summary.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -20,10 +25,7 @@ namespace OpenTelemetry {
 
 namespace {
 
-// TODO: should be one minute
-static constexpr std::chrono::seconds SAMPLING_UPDATE_TIMER_DURATION{20};
-// static constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
-
+constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
 const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME = "sampling_extrapolation_set_in_sampler";
 
 } // namespace
@@ -69,26 +71,13 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
   auto trace_state =
       TraceState::fromHeader(parent_context.has_value() ? parent_context->tracestate() : "");
 
-  std::string trace_state_value;
-
-  if (trace_state->get(dt_tracestate_key_, trace_state_value)) {
-    // we found a DT trace decision in tracestate header
-    if (FW4Tag fw4_tag = FW4Tag::create(trace_state_value); fw4_tag.isValid()) {
-      result.decision = fw4_tag.isIgnored() ? Decision::Drop : Decision::RecordAndSample;
-      att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] =
-          std::to_string(fw4_tag.getSamplingExponent());
-      result.tracestate = parent_context->tracestate();
-    }
-  } else { // make a sampling decision
-    bool sample;
-    int sampling_exponent;
-
+  } else {
     // do a decision based on the calculated exponent
     // at the moment we use a hash of the trace_id as random number
     const auto hash = MurmurHash::murmurHash2(trace_id);
     const auto sampling_state = sampling_controller_.getSamplingState(sampling_key);
-    sample = sampling_state.shouldSample(hash);
-    sampling_exponent = sampling_state.getExponent();
+    const bool sample = sampling_state.shouldSample(hash);
+    const auto sampling_exponent = sampling_state.getExponent();
 
     att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(sampling_exponent);
 

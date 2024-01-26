@@ -25,7 +25,9 @@ envoy_cc_library(
     name = "dynatrace_sampler_lib",
     srcs = [
         "dynatrace_sampler.cc",
+        "sampler_config.cc",
         "sampler_config_fetcher.cc",
+        "sampling_controller.cc",
     ],
     hdrs = [
         "dynatrace_sampler.h",

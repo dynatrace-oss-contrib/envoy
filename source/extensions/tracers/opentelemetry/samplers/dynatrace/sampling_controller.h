@@ -36,50 +36,14 @@ using TopKListT = std::list<Counter<std::string>>;
 class SamplingController : public Logger::Loggable<Logger::Id::tracing> {
 
 public:
-  void update(const TopKListT& top_k, uint64_t last_period_count, const uint32_t total_wanted) {
+  void update(const TopKListT& top_k, uint64_t last_period_count, const uint32_t total_wanted);
 
-    SamplingExponentsT new_sampling_exponents;
-    // start with sampling exponent 0, which means multiplicity == 1 (every span is sampled)
-    for (auto const& counter : top_k) {
-      new_sampling_exponents[counter.getItem()] = {};
-    }
+  SamplingState getSamplingState(const std::string& sampling_key) const;
 
-    // use the last entry as "rest bucket", which is used for new/unknown requests
-    rest_bucket_key_ = (top_k.size() > 0) ? top_k.back().getItem() : "";
+  uint64_t getEffectiveCount(const TopKListT& top_k) const;
 
-    calculateSamplingExponents(top_k, total_wanted, new_sampling_exponents);
-    logSamplingInfo(top_k, new_sampling_exponents, last_period_count, total_wanted);
-
-    absl::WriterMutexLock lock{&mutex_};
-    sampling_exponents_ = std::move(new_sampling_exponents);
-  }
-
-  SamplingState getSamplingState(const std::string& sampling_key) const {
-    absl::ReaderMutexLock lock{&mutex_};
-    auto iter = sampling_exponents_.find(sampling_key);
-    if (iter ==
-        sampling_exponents_
-            .end()) { // we don't have a sampling exponent for this exponent, use "rest bucket"
-      auto rest_bucket_iter = sampling_exponents_.find(rest_bucket_key_);
-      if (rest_bucket_iter != sampling_exponents_.end()) {
-        return rest_bucket_iter->second;
-      }
-      return {};
-    }
-    return iter->second;
-  }
-
-  uint64_t getEffectiveCount(const TopKListT& top_k) {
-    absl::ReaderMutexLock lock{&mutex_};
-    return computeEffectiveCount(top_k, sampling_exponents_);
-  }
-
-  std::string getSamplingKey(const absl::string_view path_query, const absl::string_view method) {
-    size_t query_offset = path_query.find('?');
-    auto path =
-        path_query.substr(0, query_offset != path_query.npos ? query_offset : path_query.size());
-    return absl::StrCat(method, "_", path);
-  }
+  static std::string getSamplingKey(const absl::string_view path_query,
+                                    const absl::string_view method);
 
 private:
   using SamplingExponentsT = absl::flat_hash_map<std::string, SamplingState>;
@@ -89,79 +53,13 @@ private:
   static constexpr uint32_t MAX_EXPONENT = (1 << 4) - 1; // 15
 
   void logSamplingInfo(const TopKListT& top_k, const SamplingExponentsT& new_sampling_exponents,
-                       uint64_t last_period_count, const uint32_t total_wanted) {
-    ENVOY_LOG(debug,
-              "Updating sampling info. top_k.size(): {}, last_period_count: {}, total_wanted: {}",
-              top_k.size(), last_period_count, total_wanted);
-    for (auto const& counter : top_k) {
-      auto sampling_state = new_sampling_exponents.find(counter.getItem());
-      ENVOY_LOG(debug, "- {}: value: {}, exponent: {}", counter.getItem(), counter.getValue(),
-                sampling_state->second.getExponent());
-    }
-  }
-  static uint64_t computeEffectiveCount(const TopKListT& top_k,
-                                        const SamplingExponentsT& sampling_exponents) {
-    uint64_t cnt = 0;
-    for (auto const& counter : top_k) {
-      auto sampling_state = sampling_exponents.find(counter.getItem());
-      if (sampling_state == sampling_exponents.end()) {
-        continue;
-      }
-      auto counterVal = counter.getValue();
-      auto mul = sampling_state->second.getMultiplicity();
-      auto res = counterVal / mul;
-      cnt += res;
-    }
-    return cnt;
-  }
+                       uint64_t last_period_count, const uint32_t total_wanted) const;
+
+  uint64_t calculateEffectiveCount(const TopKListT& top_k,
+                                   const SamplingExponentsT& sampling_exponents) const;
 
   void calculateSamplingExponents(const TopKListT& top_k, const uint32_t total_wanted,
-                                  SamplingExponentsT& new_sampling_exponents) {
-    const auto top_k_size = top_k.size();
-    if (top_k_size == 0 || total_wanted == 0) {
-      return;
-    }
-
-    // number of requests which are allowed for every entry
-    const uint32_t allowed_per_entry = total_wanted / top_k_size; // requests which are allowed
-
-    for (auto& counter : top_k) {
-      // allowed multiplicity for this entry
-      auto wanted_multiplicity = counter.getValue() / allowed_per_entry;
-      if (wanted_multiplicity < 0) {
-        wanted_multiplicity = 1;
-      }
-      auto sampling_state = new_sampling_exponents.find(counter.getItem());
-      // sampling exponent has to be a power of 2. Find the exponent to have multiplicity near to
-      // wanted_multiplicity
-      while (wanted_multiplicity > sampling_state->second.getMultiplicity() &&
-             sampling_state->second.getExponent() < MAX_EXPONENT) {
-        sampling_state->second.increaseExponent();
-      }
-      if (wanted_multiplicity < sampling_state->second.getMultiplicity()) {
-        // we want to have multiplicity <= wanted_multiplicity, therefore exponent is decrease once.
-        sampling_state->second.decreaseExponent();
-      }
-    }
-
-    auto effective_count = computeEffectiveCount(top_k, new_sampling_exponents);
-    // There might be entries where allowed_per_entry is greater than their count.
-    // Therefore, we would sample nubmer of total_wanted requests
-    // To avoid this, we decrease the exponent of other entries if possible
-    if (effective_count < total_wanted) {
-      for (int i = 0; i < 5; i++) { // max tries
-        for (auto reverse_it = top_k.rbegin(); reverse_it != top_k.rend();
-             ++reverse_it) { // start with lowest frequency
-          auto rev_sampling_state = new_sampling_exponents.find(reverse_it->getItem());
-          rev_sampling_state->second.decreaseExponent();
-          effective_count = computeEffectiveCount(top_k, new_sampling_exponents);
-          if (effective_count >= total_wanted) { // we are done
-            return;
-          }
-        }
-      }
-    }
-  }
+                                  SamplingExponentsT& new_sampling_exponents) const;
 };
 
 } // namespace OpenTelemetry
