@@ -220,6 +220,18 @@ TEST(SamplingStateTest, TestShouldSample) {
   EXPECT_FALSE(sst.shouldSample(2049));
 }
 
+TEST_F(SamplingControllerTest, TestGetSamplingKey) {
+  SamplingController sc;
+  std::string key = sc.getSamplingKey("somepath", "GET");
+  EXPECT_STREQ(key.c_str(), "GET_somepath");
+
+  key = sc.getSamplingKey("somepath?withquery", "POST");
+  EXPECT_STREQ(key.c_str(), "POST_somepath");
+
+  key = sc.getSamplingKey("anotherpath", "PUT");
+  EXPECT_STREQ(key.c_str(), "PUT_anotherpath");
+}
+
 } // namespace OpenTelemetry
 } // namespace Tracers
 } // namespace Extensions

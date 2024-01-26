@@ -26,13 +26,6 @@ static constexpr std::chrono::seconds SAMPLING_UPDATE_TIMER_DURATION{20};
 
 const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME = "sampling_extrapolation_set_in_sampler";
 
-std::string getSamplingKey(const absl::string_view path_query, const absl::string_view method) {
-  size_t query_offset = path_query.find('?');
-  auto path =
-      path_query.substr(0, query_offset != path_query.npos ? query_offset : path_query.size());
-  return absl::StrCat(method, "_", path);
-}
-
 } // namespace
 
 DynatraceSampler::DynatraceSampler(
@@ -63,8 +56,9 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
 
   // trace_context->path() returns path and query. query part is removed in getSamplingKey()
   const std::string sampling_key =
-      trace_context.has_value() ? getSamplingKey(trace_context->path(), trace_context->method())
-                                : "";
+      trace_context.has_value()
+          ? sampling_controller_.getSamplingKey(trace_context->path(), trace_context->method())
+          : "";
 
   if (!sampling_key.empty()) {
     absl::MutexLock lock{&stream_summary_mutex_};

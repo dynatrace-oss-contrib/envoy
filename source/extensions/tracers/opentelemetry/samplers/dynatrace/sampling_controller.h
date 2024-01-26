@@ -48,7 +48,7 @@ public:
     rest_bucket_key_ = (top_k.size() > 0) ? top_k.back().getItem() : "";
 
     calculateSamplingExponents(top_k, total_wanted, new_sampling_exponents);
-    debug_log(top_k, new_sampling_exponents, last_period_count, total_wanted);
+    logSamplingInfo(top_k, new_sampling_exponents, last_period_count, total_wanted);
 
     absl::WriterMutexLock lock{&mutex_};
     sampling_exponents_ = std::move(new_sampling_exponents);
@@ -74,6 +74,13 @@ public:
     return computeEffectiveCount(top_k, sampling_exponents_);
   }
 
+  std::string getSamplingKey(const absl::string_view path_query, const absl::string_view method) {
+    size_t query_offset = path_query.find('?');
+    auto path =
+        path_query.substr(0, query_offset != path_query.npos ? query_offset : path_query.size());
+    return absl::StrCat(method, "_", path);
+  }
+
 private:
   using SamplingExponentsT = absl::flat_hash_map<std::string, SamplingState>;
   SamplingExponentsT sampling_exponents_;
@@ -81,8 +88,8 @@ private:
   mutable absl::Mutex mutex_{};
   static constexpr uint32_t MAX_EXPONENT = (1 << 4) - 1; // 15
 
-  void debug_log(const TopKListT& top_k, const SamplingExponentsT& new_sampling_exponents,
-                 uint64_t last_period_count, const uint32_t total_wanted) {
+  void logSamplingInfo(const TopKListT& top_k, const SamplingExponentsT& new_sampling_exponents,
+                       uint64_t last_period_count, const uint32_t total_wanted) {
     ENVOY_LOG(debug,
               "Updating sampling info. top_k.size(): {}, last_period_count: {}, total_wanted: {}",
               top_k.size(), last_period_count, total_wanted);
