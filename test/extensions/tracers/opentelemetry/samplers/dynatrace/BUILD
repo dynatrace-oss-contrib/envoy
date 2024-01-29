@@ -28,10 +28,8 @@ envoy_extension_cc_test(
     name = "dynatrace_sampler_test",
     srcs = [
         "dynatrace_sampler_test.cc",
-        "dynatrace_tracestate_test.cc",
         "sampler_config_fetcher_test.cc",
         "sampler_config_test.cc",
-        "tracestate_test.cc",
     ],
     extension_names = ["envoy.tracers.opentelemetry.samplers.dynatrace"],
     deps = [
