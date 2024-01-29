@@ -17,7 +17,7 @@ class FW4Tag {
 public:
   static FW4Tag createInvalid();
 
-  static FW4Tag create(bool ignored, uint32_t sampling_exponent, uint32_t root_path_random_);
+  static FW4Tag create(bool ignored, uint32_t sampling_exponent, uint32_t root_path_random);
 
   static FW4Tag create(const std::string& value);
 

@@ -80,16 +80,10 @@ public:
 
   std::string getDescription() const override;
 
-  static constexpr size_t STREAM_SUMMARY_SIZE{100};
-
 private:
   std::string tenant_id_;
   std::string cluster_id_;
-
   std::string dt_tracestate_key_;
-  SamplerConfigFetcherPtr sampler_config_fetcher_;
-  std::unique_ptr<StreamSummaryT> stream_summary_;
-  mutable absl::Mutex stream_summary_mutex_{};
   Event::TimerPtr timer_;
   SamplingController sampling_controller_;
 

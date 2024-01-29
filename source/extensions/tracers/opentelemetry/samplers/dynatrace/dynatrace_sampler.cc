@@ -9,7 +9,6 @@
 <<<<<<< HEAD
 =======
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_tracestate.h"
-#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/stream_summary.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/tracestate.h"
 >>>>>>> b53b23ded4 (fix include paths, add a few const)
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
@@ -36,9 +35,7 @@ DynatraceSampler::DynatraceSampler(
     SamplerConfigFetcherPtr sampler_config_fetcher)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
       dt_tracestate_entry_(tenant_id_, cluster_id_),
-      sampler_config_fetcher_(std::move(sampler_config_fetcher)),
-      stream_summary_(std::make_unique<StreamSummaryT>(STREAM_SUMMARY_SIZE)),
-      sampling_controller_() {
+      sampling_controller_(std::move(sampler_config_fetcher)) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     updateSamplingInfo();
@@ -62,10 +59,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
           ? sampling_controller_.getSamplingKey(trace_context->path(), trace_context->method())
           : "";
 
-  if (!sampling_key.empty()) {
-    absl::MutexLock lock{&stream_summary_mutex_};
-    stream_summary_->offer(sampling_key);
-  }
+  sampling_controller_.offer(sampling_key);
 
 
   auto trace_state =
@@ -94,18 +88,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
   return result;
 }
 
-void DynatraceSampler::updateSamplingInfo() {
-  absl::MutexLock lock{&stream_summary_mutex_};
-  auto top_k = stream_summary_->getTopK();
-  auto last_period_count = stream_summary_->getN();
-
-  // update sampling exponents
-  sampling_controller_.update(top_k, last_period_count,
-                              sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute());
-  // Note: getTopK() returns references to values in StreamSummary.
-  // Do not destroy it while top_k is used!
-  stream_summary_ = std::make_unique<StreamSummaryT>(STREAM_SUMMARY_SIZE);
-}
+void DynatraceSampler::updateSamplingInfo() { sampling_controller_.update(); }
 
 std::string DynatraceSampler::getDescription() const { return "DynatraceSampler"; }
 

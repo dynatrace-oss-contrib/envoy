@@ -7,6 +7,19 @@ namespace OpenTelemetry {
 
 namespace {}
 
+void SamplingController::update() {
+  absl::MutexLock lock{&stream_summary_mutex_};
+  const auto top_k = stream_summary_->getTopK();
+  const auto last_period_count = stream_summary_->getN();
+
+  // update sampling exponents
+  update(top_k, last_period_count,
+         sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute());
+  // Note: getTopK() returns references to values in StreamSummary.
+  // Do not destroy it while top_k is used!
+  stream_summary_ = std::make_unique<StreamSummaryT>(STREAM_SUMMARY_SIZE);
+}
+
 void SamplingController::update(const TopKListT& top_k, uint64_t last_period_count,
                                 const uint32_t total_wanted) {
 
@@ -20,19 +33,27 @@ void SamplingController::update(const TopKListT& top_k, uint64_t last_period_cou
   rest_bucket_key_ = (!top_k.empty()) ? top_k.back().getItem() : "";
 
   calculateSamplingExponents(top_k, total_wanted, new_sampling_exponents);
+  last_effective_count_ = calculateEffectiveCount(top_k, new_sampling_exponents);
   logSamplingInfo(top_k, new_sampling_exponents, last_period_count, total_wanted);
 
-  absl::WriterMutexLock lock{&mutex_};
+  absl::WriterMutexLock lock{&sampling_exponents_mutex_};
   sampling_exponents_ = std::move(new_sampling_exponents);
 }
 
-uint64_t SamplingController::getEffectiveCount(const TopKListT& top_k) const {
-  absl::ReaderMutexLock lock{&mutex_};
-  return calculateEffectiveCount(top_k, sampling_exponents_);
+uint64_t SamplingController::getEffectiveCount() const {
+  absl::MutexLock lock{&stream_summary_mutex_};
+  return last_effective_count_;
+}
+
+void SamplingController::offer(const std::string& sampling_key) {
+  if (!sampling_key.empty()) {
+    absl::MutexLock lock{&stream_summary_mutex_};
+    stream_summary_->offer(sampling_key);
+  }
 }
 
 SamplingState SamplingController::getSamplingState(const std::string& sampling_key) const {
-  absl::ReaderMutexLock lock{&mutex_};
+  absl::ReaderMutexLock lock{&sampling_exponents_mutex_};
   auto iter = sampling_exponents_.find(sampling_key);
   if (iter ==
       sampling_exponents_
@@ -68,9 +89,8 @@ void SamplingController::logSamplingInfo(const TopKListT& top_k,
   }
 }
 
-uint64_t
-SamplingController::calculateEffectiveCount(const TopKListT& top_k,
-                                            const SamplingExponentsT& sampling_exponents) const {
+uint64_t SamplingController::calculateEffectiveCount(const TopKListT& top_k,
+                                                     const SamplingExponentsT& sampling_exponents) {
   uint64_t cnt = 0;
   for (auto const& counter : top_k) {
     auto sampling_state = sampling_exponents.find(counter.getItem());

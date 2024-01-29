@@ -7,7 +7,6 @@
 
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_sampler.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/sampling_controller.h"
-#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/stream_summary.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -19,42 +18,38 @@ namespace OpenTelemetry {
 
 namespace {
 
-void offerEntry(StreamSummaryT& summary, const std::string& value, int count) {
+void offerEntry(SamplingController& sc, const std::string& value, int count) {
   for (int i = 0; i < count; i++) {
-    summary.offer(value);
+    sc.offer(value);
   }
 }
 
 } // namespace
 
-template <typename T> std::string toString(T const& list) {
-  std::ostringstream oss;
-  for (auto const& counter : list) {
-    oss << counter.getItem() << ":(" << counter.getValue() << "/" << counter.getError() << ")"
-        << std::endl;
-  }
-  return oss.str();
-}
+class TestSamplerConfigFetcher : public SamplerConfigFetcher {
+public:
+  const SamplerConfig& getSamplerConfig() const { return config; }
+  SamplerConfig config;
+};
 
 class SamplingControllerTest : public testing::Test {};
 
 TEST_F(SamplingControllerTest, TestManyDifferentRequests) {
-  StreamSummaryT summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
-  offerEntry(summary, "1", 2000);
-  offerEntry(summary, "2", 1000);
-  offerEntry(summary, "3", 750);
-  offerEntry(summary, "4", 100);
-  offerEntry(summary, "5", 50);
+  auto scf = std::make_unique<TestSamplerConfigFetcher>();
+  SamplingController sc(std::move(scf));
+
+  offerEntry(sc, "1", 2000);
+  offerEntry(sc, "2", 1000);
+  offerEntry(sc, "3", 750);
+  offerEntry(sc, "4", 100);
+  offerEntry(sc, "5", 50);
   for (int64_t i = 0; i < 2100; i++) {
-    summary.offer(std::to_string(i + 1000000));
+    sc.offer(std::to_string(i + 1000000));
   }
 
-  SamplingController sc;
-  sc.update(summary.getTopK(), summary.getN(), 1000);
+  sc.update();
 
-  // std::cout << toString(summary.getTopK());
-
-  EXPECT_EQ(sc.getEffectiveCount(summary.getTopK()), 1110);
+  EXPECT_EQ(sc.getEffectiveCount(), 1110);
   EXPECT_EQ(sc.getSamplingState("1").getMultiplicity(), 128);
   EXPECT_EQ(sc.getSamplingState("2").getMultiplicity(), 64);
   EXPECT_EQ(sc.getSamplingState("3").getMultiplicity(), 64);
@@ -66,22 +61,21 @@ TEST_F(SamplingControllerTest, TestManyDifferentRequests) {
 }
 
 TEST_F(SamplingControllerTest, TestManyRequests) {
-  StreamSummaryT summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
-  offerEntry(summary, "1", 8600);
-  offerEntry(summary, "2", 5000);
-  offerEntry(summary, "3", 4000);
-  offerEntry(summary, "4", 4000);
-  offerEntry(summary, "5", 3000);
-  offerEntry(summary, "6", 30);
-  offerEntry(summary, "7", 3);
-  offerEntry(summary, "8", 1);
+  auto scf = std::make_unique<TestSamplerConfigFetcher>();
+  SamplingController sc(std::move(scf));
 
-  SamplingController sc;
-  sc.update(summary.getTopK(), summary.getN(), 1000);
+  offerEntry(sc, "1", 8600);
+  offerEntry(sc, "2", 5000);
+  offerEntry(sc, "3", 4000);
+  offerEntry(sc, "4", 4000);
+  offerEntry(sc, "5", 3000);
+  offerEntry(sc, "6", 30);
+  offerEntry(sc, "7", 3);
+  offerEntry(sc, "8", 1);
 
-  // std::cout << toString(summary.getTopK());
+  sc.update();
 
-  EXPECT_EQ(sc.getEffectiveCount(summary.getTopK()), 1074);
+  EXPECT_EQ(sc.getEffectiveCount(), 1074);
   EXPECT_EQ(sc.getSamplingState("1").getMultiplicity(), 64);
   EXPECT_EQ(sc.getSamplingState("2").getMultiplicity(), 32);
   EXPECT_EQ(sc.getSamplingState("3").getMultiplicity(), 32);
@@ -93,20 +87,21 @@ TEST_F(SamplingControllerTest, TestManyRequests) {
 }
 
 TEST_F(SamplingControllerTest, TestSomeRequests) {
-  StreamSummaryT summary(DynatraceSampler::STREAM_SUMMARY_SIZE);
-  offerEntry(summary, "1", 7500);
-  offerEntry(summary, "2", 1000);
-  offerEntry(summary, "3", 1);
-  offerEntry(summary, "4", 1);
-  offerEntry(summary, "5", 1);
+  auto scf = std::make_unique<TestSamplerConfigFetcher>();
+  SamplingController sc(std::move(scf));
+
+  offerEntry(sc, "1", 7500);
+  offerEntry(sc, "2", 1000);
+  offerEntry(sc, "3", 1);
+  offerEntry(sc, "4", 1);
+  offerEntry(sc, "5", 1);
   for (int64_t i = 0; i < 11; i++) {
-    summary.offer(std::to_string(i + 1000000));
+    sc.offer(std::to_string(i + 1000000));
   }
 
-  SamplingController sc;
-  sc.update(summary.getTopK(), summary.getN(), 1000);
+  sc.update();
 
-  EXPECT_EQ(sc.getEffectiveCount(summary.getTopK()), 1451);
+  EXPECT_EQ(sc.getEffectiveCount(), 1451);
   EXPECT_EQ(sc.getSamplingState("1").getMultiplicity(), 8);
   EXPECT_EQ(sc.getSamplingState("2").getMultiplicity(), 2);
   EXPECT_EQ(sc.getSamplingState("3").getMultiplicity(), 1);
@@ -119,14 +114,15 @@ TEST_F(SamplingControllerTest, TestSomeRequests) {
 }
 
 TEST_F(SamplingControllerTest, TestSimple) {
-  StreamSummaryT summary(10);
-  // offerEntry data
-  offerEntry(summary, "GET_xxxx", 300);
-  offerEntry(summary, "POST_asdf", 200);
-  offerEntry(summary, "GET_asdf", 100);
+  auto scf = std::make_unique<TestSamplerConfigFetcher>();
+  scf->config.parse("{\n \"rootSpansPerMinute\" : 100 \n }");
+  SamplingController sc(std::move(scf));
 
-  SamplingController sc;
-  sc.update(summary.getTopK(), summary.getN(), 100);
+  offerEntry(sc, "GET_xxxx", 300);
+  offerEntry(sc, "POST_asdf", 200);
+  offerEntry(sc, "GET_asdf", 100);
+
+  sc.update();
 
   EXPECT_EQ(sc.getSamplingState("GET_xxxx").getExponent(), 3);
   EXPECT_EQ(sc.getSamplingState("GET_xxxx").getMultiplicity(), 8);
@@ -136,33 +132,24 @@ TEST_F(SamplingControllerTest, TestSimple) {
 
   EXPECT_EQ(sc.getSamplingState("GET_asdf").getExponent(), 1);
   EXPECT_EQ(sc.getSamplingState("GET_asdf").getMultiplicity(), 2);
-
-  // total_wanted > number of requests
-  sc.update(summary.getTopK(), summary.getN(), 1000);
-  EXPECT_EQ(sc.getSamplingState("GET_xxxx").getExponent(), 0);
-  EXPECT_EQ(sc.getSamplingState("GET_xxxx").getMultiplicity(), 1);
-
-  EXPECT_EQ(sc.getSamplingState("POST_asdf").getExponent(), 0);
-  EXPECT_EQ(sc.getSamplingState("POST_asdf").getMultiplicity(), 1);
-
-  EXPECT_EQ(sc.getSamplingState("GET_asdf").getExponent(), 0);
-  EXPECT_EQ(sc.getSamplingState("GET_asdf").getMultiplicity(), 1);
 }
 
 TEST_F(SamplingControllerTest, TestEmpty) {
-  StreamSummaryT summary(10);
-  SamplingController sc;
-  sc.update(summary.getTopK(), summary.getN(), 100);
+  auto scf = std::make_unique<TestSamplerConfigFetcher>();
+  SamplingController sc(std::move(scf));
+
+  sc.update();
 
   EXPECT_EQ(sc.getSamplingState("GET_something").getExponent(), 0);
   EXPECT_EQ(sc.getSamplingState("GET_something").getMultiplicity(), 1);
 }
 
 TEST_F(SamplingControllerTest, TestNonExisting) {
-  StreamSummaryT summary(10);
-  summary.offer("key1");
-  SamplingController sc;
-  sc.update(summary.getTopK(), summary.getN(), 100);
+  auto scf = std::make_unique<TestSamplerConfigFetcher>();
+  SamplingController sc(std::move(scf));
+
+  sc.offer("key1");
+  sc.update();
 
   EXPECT_EQ(sc.getSamplingState("key2").getExponent(), 0);
   EXPECT_EQ(sc.getSamplingState("key2").getMultiplicity(), 1);
