@@ -25,10 +25,14 @@ public:
     }
   }
 
+  explicit SamplingState(uint32_t exponent) : exponent_(exponent){};
+
+  SamplingState() = default;
+
   bool shouldSample(const uint64_t random_nr) const { return (random_nr % getMultiplicity() == 0); }
 
 private:
-  uint32_t exponent_{};
+  uint32_t exponent_{0};
 };
 
 using StreamSummaryT = StreamSummary<std::string>;
@@ -59,7 +63,7 @@ private:
   SamplingExponentsT sampling_exponents_;
   mutable absl::Mutex sampling_exponents_mutex_{};
   std::string rest_bucket_key_{};
-  static constexpr uint32_t MAX_EXPONENT = (1 << 4) - 1; // 15
+  static constexpr uint32_t MAX_SAMPLING_EXPONENT = (1 << 4) - 1; // 15
   std::unique_ptr<StreamSummaryT> stream_summary_;
   uint64_t last_effective_count_{};
   mutable absl::Mutex stream_summary_mutex_{};

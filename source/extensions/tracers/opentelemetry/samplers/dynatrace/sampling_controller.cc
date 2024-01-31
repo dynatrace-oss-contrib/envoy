@@ -8,7 +8,7 @@ namespace OpenTelemetry {
 namespace {}
 
 void SamplingController::update() {
-  absl::MutexLock lock{&stream_summary_mutex_};
+  absl::WriterMutexLock lock{&stream_summary_mutex_};
   const auto top_k = stream_summary_->getTopK();
   const auto last_period_count = stream_summary_->getN();
 
@@ -26,7 +26,7 @@ void SamplingController::update(const TopKListT& top_k, uint64_t last_period_cou
   SamplingExponentsT new_sampling_exponents;
   // start with sampling exponent 0, which means multiplicity == 1 (every span is sampled)
   for (auto const& counter : top_k) {
-    new_sampling_exponents[counter.getItem()] = {};
+    new_sampling_exponents[counter.getItem()] = SamplingState(0);
   }
 
   // use the last entry as "rest bucket", which is used for new/unknown requests
@@ -41,30 +41,41 @@ void SamplingController::update(const TopKListT& top_k, uint64_t last_period_cou
 }
 
 uint64_t SamplingController::getEffectiveCount() const {
-  absl::MutexLock lock{&stream_summary_mutex_};
+  absl::ReaderMutexLock lock{&stream_summary_mutex_};
   return last_effective_count_;
 }
 
 void SamplingController::offer(const std::string& sampling_key) {
   if (!sampling_key.empty()) {
-    absl::MutexLock lock{&stream_summary_mutex_};
+    absl::WriterMutexLock lock{&stream_summary_mutex_};
     stream_summary_->offer(sampling_key);
   }
 }
 
 SamplingState SamplingController::getSamplingState(const std::string& sampling_key) const {
-  absl::ReaderMutexLock lock{&sampling_exponents_mutex_};
-  auto iter = sampling_exponents_.find(sampling_key);
-  if (iter ==
-      sampling_exponents_
-          .end()) { // we don't have a sampling exponent for this exponent, use "rest bucket"
+  { // scope for lock
+    absl::ReaderMutexLock sax_lock{&sampling_exponents_mutex_};
+    auto iter = sampling_exponents_.find(sampling_key);
+    if (iter != sampling_exponents_.end()) {
+      return iter->second;
+    }
+
+    // try to use "rest bucket"
     auto rest_bucket_iter = sampling_exponents_.find(rest_bucket_key_);
     if (rest_bucket_iter != sampling_exponents_.end()) {
       return rest_bucket_iter->second;
     }
-    return {};
   }
-  return iter->second;
+
+  // If we can't find a sampling exponent, we calculate it based on the total number of requests
+  // in this period. This should also handle the "warmup phase" where no top_k is available
+  const auto divisor = sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute() / 2;
+  if (divisor == 0) {
+    return SamplingState{MAX_SAMPLING_EXPONENT};
+  }
+  absl::ReaderMutexLock ss_lock{&stream_summary_mutex_};
+  const uint32_t exp = stream_summary_->getN() / divisor;
+  return SamplingState{exp};
 }
 
 std::string SamplingController::getSamplingKey(const absl::string_view path_query,
@@ -126,7 +137,7 @@ void SamplingController::calculateSamplingExponents(
     // sampling exponent has to be a power of 2. Find the exponent to have multiplicity near to
     // wanted_multiplicity
     while (wanted_multiplicity > sampling_state->second.getMultiplicity() &&
-           sampling_state->second.getExponent() < MAX_EXPONENT) {
+           sampling_state->second.getExponent() < MAX_SAMPLING_EXPONENT) {
       sampling_state->second.increaseExponent();
     }
     if (wanted_multiplicity < sampling_state->second.getMultiplicity()) {

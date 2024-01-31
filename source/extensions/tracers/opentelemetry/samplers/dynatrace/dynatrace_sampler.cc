@@ -6,11 +6,6 @@
 
 #include "source/common/common/hash.h"
 #include "source/common/config/datasource.h"
-<<<<<<< HEAD
-=======
-#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_tracestate.h"
-#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/tracestate.h"
->>>>>>> b53b23ded4 (fix include paths, add a few const)
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 #include "source/extensions/tracers/opentelemetry/span_context.h"
 #include "source/extensions/tracers/opentelemetry/trace_state.h"
@@ -34,7 +29,8 @@ DynatraceSampler::DynatraceSampler(
     Server::Configuration::TracerFactoryContext& context,
     SamplerConfigFetcherPtr sampler_config_fetcher)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
-      dt_tracestate_entry_(tenant_id_, cluster_id_),
+      dt_tracestate_key_(absl::StrCat(absl::string_view(config.tenant_id()), "-",
+                                      absl::string_view(config.cluster_id()), "@dt")),
       sampling_controller_(std::move(sampler_config_fetcher)) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
@@ -61,10 +57,19 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
 
   sampling_controller_.offer(sampling_key);
 
-
   auto trace_state =
       TraceState::fromHeader(parent_context.has_value() ? parent_context->tracestate() : "");
 
+  std::string trace_state_value;
+
+  if (trace_state->get(dt_tracestate_key_, trace_state_value)) {
+    // we found a DT trace decision in tracestate header
+    if (FW4Tag fw4_tag = FW4Tag::create(trace_state_value); fw4_tag.isValid()) {
+      result.decision = fw4_tag.isIgnored() ? Decision::Drop : Decision::RecordAndSample;
+      att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] =
+          std::to_string(fw4_tag.getSamplingExponent());
+      result.tracestate = parent_context->tracestate();
+    }
   } else {
     // do a decision based on the calculated exponent
     // at the moment we use a hash of the trace_id as random number

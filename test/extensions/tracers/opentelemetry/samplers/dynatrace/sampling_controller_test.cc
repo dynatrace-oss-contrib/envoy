@@ -134,6 +134,44 @@ TEST_F(SamplingControllerTest, TestSimple) {
   EXPECT_EQ(sc.getSamplingState("GET_asdf").getMultiplicity(), 2);
 }
 
+TEST_F(SamplingControllerTest, TestWarmup) {
+  auto scf = std::make_unique<TestSamplerConfigFetcher>();
+  SamplingController sc(std::move(scf));
+
+  // offer entries, but don't call update();
+  // sampling exponents table will be empty
+  // exponent will be calculated based on count.
+  offerEntry(sc, "GET_0", 10);
+  EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 0);
+  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 0);
+  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 0);
+
+  offerEntry(sc, "GET_1", 540);
+  EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 1);
+
+  offerEntry(sc, "GET_0", 300);
+  EXPECT_EQ(sc.getSamplingState("GET_0").getExponent(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_10").getExponent(), 1);
+
+  offerEntry(sc, "GET_4", 550);
+  EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 2);
+  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 2);
+  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 2);
+
+  offerEntry(sc, "GET_5", 1000);
+  EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 4);
+  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 4);
+  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 4);
+
+  offerEntry(sc, "GET_7", 2000);
+  EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 8);
+  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 8);
+  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 8);
+}
+
 TEST_F(SamplingControllerTest, TestEmpty) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));

@@ -21,13 +21,13 @@ namespace OpenTelemetry {
 
 class FW4Tag {
 public:
-  FW4Tag FW4Tag::createInvalid() { return {false, false, 0, 0}; }
+  static FW4Tag createInvalid() { return {false, false, 0, 0}; }
 
-  FW4Tag FW4Tag::create(bool ignored, int sampling_exponent, int root_path_random_) {
-    return {true, ignored, sampling_exponent, root_path_random_};
+  static FW4Tag create(bool ignored, uint32_t sampling_exponent, uint32_t path_info) {
+    return {true, ignored, sampling_exponent, path_info};
   }
 
-  static FW4Tag FW4Tag::create(const std::string& value) {
+  static FW4Tag create(const std::string& value) {
     std::vector<absl::string_view> tracestate_components =
         absl::StrSplit(value, ';', absl::AllowEmpty());
     if (tracestate_components.size() < 8) {
@@ -38,28 +38,35 @@ public:
       return createInvalid();
     }
     bool ignored = tracestate_components[5] == "1";
-    int sampling_exponent = std::stoi(std::string(tracestate_components[6]));
-    int root_path_random = std::stoi(std::string(tracestate_components[7]), nullptr, 16);
-    return {true, ignored, sampling_exponent, root_path_random};
+    uint32_t sampling_exponent;
+    uint32_t path_info;
+    if (absl::SimpleAtoi(tracestate_components[6], &sampling_exponent) &&
+        absl::SimpleHexAtoi(tracestate_components[7], &path_info)) {
+      return {true, ignored, sampling_exponent, path_info};
+    }
+    return createInvalid();
   }
 
-  std::string FW4Tag::asString() const {
-    std::string ret = absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_, ";",
-                                  absl::Hex(root_path_random_));
+  std::string asString() const {
+    std::string ret = absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_,
+                                   ";", absl::Hex(path_info_));
     return ret;
   }
 
   bool isValid() const { return valid_; };
   bool isIgnored() const { return ignored_; };
   int getSamplingExponent() const { return sampling_exponent_; };
+  uint32_t getPathInfo() const { return path_info_; };
 
 private:
-  FW4Tag(bool valid, bool ignored, int sampling_exponent)
-      : valid_(valid), ignored_(ignored), sampling_exponent_(sampling_exponent) {}
+  FW4Tag(bool valid, bool ignored, uint32_t sampling_exponent, uint32_t path_info)
+      : valid_(valid), ignored_(ignored), sampling_exponent_(sampling_exponent),
+        path_info_(path_info) {}
 
   bool valid_;
   bool ignored_;
-  int sampling_exponent_;
+  uint32_t sampling_exponent_;
+  uint32_t path_info_;
 };
 
 /**
