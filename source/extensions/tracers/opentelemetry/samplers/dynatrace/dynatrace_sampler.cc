@@ -21,7 +21,6 @@ DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
     Server::Configuration::TracerFactoryContext& context)
     : tenant_id_(config.tenant_id()), cluster_id_(config.cluster_id()),
-      // TODO: Can't this be done automatically, inside dynatrace_sampler.h?
       dt_tracestate_key_(absl::StrCat(absl::string_view(config.tenant_id()), "-",
                                       absl::string_view(config.cluster_id()), "@dt")),
       sampler_config_fetcher_(context, config.http_uri(), config.token()), counter_(0) {}

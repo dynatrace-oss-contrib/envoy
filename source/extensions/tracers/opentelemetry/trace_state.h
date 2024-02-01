@@ -217,17 +217,6 @@ public:
 private:
   TraceState() : kv_properties_(new KeyValueProperties()) {}
   TraceState(size_t size) : kv_properties_(new KeyValueProperties(size)) {}
-
-  static absl::string_view trimString(absl::string_view str, size_t left, size_t right) {
-    while (str[static_cast<std::size_t>(right)] == ' ' && left < right) {
-      right--;
-    }
-    while (str[static_cast<std::size_t>(left)] == ' ' && left < right) {
-      left++;
-    }
-    return str.substr(left, right - left + 1);
-  }
-
   static bool isLowerCaseAlphaOrDigit(char c) { return isdigit(c) || islower(c); }
 
 private:
