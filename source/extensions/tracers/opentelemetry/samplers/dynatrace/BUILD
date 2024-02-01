@@ -25,20 +25,17 @@ envoy_cc_library(
     name = "dynatrace_sampler_lib",
     srcs = [
         "dynatrace_sampler.cc",
-        "dynatrace_tracestate.cc",
         "sampler_config_fetcher.cc",
-        "tracestate.cc",
     ],
     hdrs = [
         "dynatrace_sampler.h",
-        "dynatrace_tracestate.h",
         "sampler_config.h",
         "sampler_config_fetcher.h",
-        "tracestate.h",
     ],
     deps = [
         "//source/common/config:datasource_lib",
         "//source/extensions/tracers/opentelemetry:opentelemetry_tracer_lib",
+        "//source/extensions/tracers/opentelemetry:trace_state_lib",
         "//source/extensions/tracers/opentelemetry/samplers:sampler_lib",
         "@envoy_api//envoy/config/core/v3:pkg_cc_proto",
         "@envoy_api//envoy/extensions/tracers/opentelemetry/samplers/v3:pkg_cc_proto",
