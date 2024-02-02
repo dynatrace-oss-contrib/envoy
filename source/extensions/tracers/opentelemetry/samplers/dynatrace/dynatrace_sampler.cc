@@ -34,7 +34,7 @@ DynatraceSampler::DynatraceSampler(
       sampling_controller_(std::move(sampler_config_fetcher)) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
-    updateSamplingInfo();
+    sampling_controller_.update();
     timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
   });
   timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
@@ -92,8 +92,6 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
   }
   return result;
 }
-
-void DynatraceSampler::updateSamplingInfo() { sampling_controller_.update(); }
 
 std::string DynatraceSampler::getDescription() const { return "DynatraceSampler"; }
 

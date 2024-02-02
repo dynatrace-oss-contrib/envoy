@@ -93,8 +93,6 @@ private:
   std::string dt_tracestate_key_;
   Event::TimerPtr timer_;
   SamplingController sampling_controller_;
-
-  void updateSamplingInfo();
 };
 
 } // namespace OpenTelemetry
