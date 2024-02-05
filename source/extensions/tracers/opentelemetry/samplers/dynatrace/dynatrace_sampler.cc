@@ -11,6 +11,7 @@
 #include "source/extensions/tracers/opentelemetry/trace_state.h"
 
 #include "absl/strings/str_cat.h"
+#include "openssl/md5.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -22,13 +23,37 @@ namespace {
 constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
 const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME = "sampling_extrapolation_set_in_sampler";
 
+absl::Hex calculateTenantId(std::string tenant_uuid) {
+  if (tenant_uuid.empty()) {
+    return absl::Hex(0);
+  }
+
+  for (char& c : tenant_uuid) {
+    if (c & 0x80) {
+      c = 0x3f; // '?'
+    }
+  }
+
+  uint8_t digest[16];
+  MD5(reinterpret_cast<const uint8_t*>(tenant_uuid.data()), tenant_uuid.size(), digest);
+
+  int32_t hash = 0;
+  for (int i = 0; i < 16; i++) {
+    const int shift_for_target_byte = (3 - (i % 4)) * 8;
+    // 24, 16, 8, 0 respectively
+    hash ^=
+        (static_cast<int>(digest[i]) << shift_for_target_byte) & (0xff << shift_for_target_byte);
+  }
+  return absl::Hex(hash);
+}
+
 } // namespace
 
 DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
     Server::Configuration::TracerFactoryContext& context,
     SamplerConfigFetcherPtr sampler_config_fetcher)
-    : dt_tracestate_key_(absl::StrCat(absl::string_view(config.tenant_id()), "-",
+    : dt_tracestate_key_(absl::StrCat(calculateTenantId(config.tenant_id()), "-",
                                       absl::string_view(config.cluster_id()), "@dt")),
       sampling_controller_(std::move(sampler_config_fetcher)) {
 

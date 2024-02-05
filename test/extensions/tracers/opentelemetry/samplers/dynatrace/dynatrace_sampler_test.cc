@@ -23,10 +23,10 @@ const char* trace_id = "67a9a23155e1741b5b35368e08e6ece5";
 const char* parent_span_id = "9d83def9a4939b7b";
 
 const char* dt_tracestate_ignored =
-    "9712ad40-980df25c@dt=fw4;4;4af38366;0;0;1;2;123;8eae;2h01;3h4af38366;4h00;5h01;"
+    "5b3f9fed-980df25c@dt=fw4;4;4af38366;0;0;1;2;123;8eae;2h01;3h4af38366;4h00;5h01;"
     "6h67a9a23155e1741b5b35368e08e6ece5;7h9d83def9a4939b7b";
 const char* dt_tracestate_sampled =
-    "9712ad40-980df25c@dt=fw4;4;4af38366;0;0;0;0;123;8eae;2h01;3h4af38366;4h00;5h01;"
+    "5b3f9fed-980df25c@dt=fw4;4;4af38366;0;0;0;0;123;8eae;2h01;3h4af38366;4h00;5h01;"
     "6h67a9a23155e1741b5b35368e08e6ece5;7h9d83def9a4939b7b";
 const char* dt_tracestate_ignored_different_tenant =
     "6666ad40-980df25c@dt=fw4;4;4af38366;0;0;1;2;123;8eae;2h01;3h4af38366;4h00;5h01;"
@@ -42,7 +42,7 @@ public:
 class DynatraceSamplerTest : public testing::Test {
 
   const std::string yaml_string_ = R"EOF(
-          tenant_id: "9712ad40"
+          tenant_id: "abc12345"
           cluster_id: "980df25c"
   )EOF";
 
@@ -80,7 +80,7 @@ TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
-  EXPECT_STREQ(sampling_result.tracestate.c_str(), "9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;95");
+  EXPECT_STREQ(sampling_result.tracestate.c_str(), "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
@@ -88,7 +88,7 @@ TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
 // Verify sampler being invoked with existing Dynatrace trace state tag set
 TEST_F(DynatraceSamplerTest, TestWithParentContext) {
   SpanContext parent_context = SpanContext("00", trace_id, "b7ad6b7169203331", true,
-                                           "ot=foo:bar,9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;ad");
+                                           "ot=foo:bar,5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;ad");
 
   SamplingResult sampling_result =
       sampler_->shouldSample(parent_context, trace_id, "parent_span",
@@ -96,7 +96,7 @@ TEST_F(DynatraceSamplerTest, TestWithParentContext) {
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
   EXPECT_STREQ(sampling_result.tracestate.c_str(),
-               "ot=foo:bar,9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;ad");
+               "ot=foo:bar,5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;ad");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
@@ -111,7 +111,7 @@ TEST_F(DynatraceSamplerTest, TestWithUnknownParentContext) {
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
   EXPECT_STREQ(sampling_result.tracestate.c_str(),
-               "9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;95,some_vendor=some_value");
+               "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95,some_vendor=some_value");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
@@ -156,7 +156,7 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextFromDifferentTenant) 
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
   const char* exptected =
-      "9712ad40-980df25c@dt=fw4;0;0;0;0;0;0;95,6666ad40-980df25c@dt=fw4;4;4af38366;0;0;1;2;123;"
+      "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95,6666ad40-980df25c@dt=fw4;4;4af38366;0;0;1;2;123;"
       "8eae;2h01;3h4af38366;4h00;5h01;6h67a9a23155e1741b5b35368e08e6ece5;7h9d83def9a4939b7b";
   EXPECT_STREQ(sampling_result.tracestate.c_str(), exptected);
   EXPECT_TRUE(sampling_result.isRecording());
