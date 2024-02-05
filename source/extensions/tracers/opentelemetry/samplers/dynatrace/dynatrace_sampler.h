@@ -88,8 +88,6 @@ public:
   std::string getDescription() const override;
 
 private:
-  std::string tenant_id_;
-  std::string cluster_id_;
   std::string dt_tracestate_key_;
   Event::TimerPtr timer_;
   SamplingController sampling_controller_;
