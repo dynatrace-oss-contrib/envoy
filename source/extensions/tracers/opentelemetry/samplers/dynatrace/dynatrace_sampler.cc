@@ -23,6 +23,56 @@ namespace {
 constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
 const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME = "sampling_extrapolation_set_in_sampler";
 
+class DynatraceTag {
+public:
+  static DynatraceTag createInvalid() { return {false, false, 0, 0}; }
+
+  static DynatraceTag create(bool ignored, uint32_t sampling_exponent, uint32_t path_info) {
+    return {true, ignored, sampling_exponent, path_info};
+  }
+
+  static DynatraceTag create(const std::string& value) {
+    std::vector<absl::string_view> tracestate_components =
+        absl::StrSplit(value, ';', absl::AllowEmpty());
+    if (tracestate_components.size() < 8) {
+      return createInvalid();
+    }
+
+    if (tracestate_components[0] != "fw4") {
+      return createInvalid();
+    }
+    bool ignored = tracestate_components[5] == "1";
+    uint32_t sampling_exponent;
+    uint32_t path_info;
+    if (absl::SimpleAtoi(tracestate_components[6], &sampling_exponent) &&
+        absl::SimpleHexAtoi(tracestate_components[7], &path_info)) {
+      return {true, ignored, sampling_exponent, path_info};
+    }
+    return createInvalid();
+  }
+
+  std::string asString() const {
+    std::string ret = absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_,
+                                   ";", absl::Hex(path_info_));
+    return ret;
+  }
+
+  bool isValid() const { return valid_; };
+  bool isIgnored() const { return ignored_; };
+  int getSamplingExponent() const { return sampling_exponent_; };
+  uint32_t getPathInfo() const { return path_info_; };
+
+private:
+  DynatraceTag(bool valid, bool ignored, uint32_t sampling_exponent, uint32_t path_info)
+      : valid_(valid), ignored_(ignored), sampling_exponent_(sampling_exponent),
+        path_info_(path_info) {}
+
+  bool valid_;
+  bool ignored_;
+  uint32_t sampling_exponent_;
+  uint32_t path_info_;
+};
+
 } // namespace
 
 DynatraceSampler::DynatraceSampler(
@@ -55,6 +105,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
           ? sampling_controller_.getSamplingKey(trace_context->path(), trace_context->method())
           : "";
 
+  // add it to stream summary containing the number of requests
   sampling_controller_.offer(sampling_key);
 
   auto trace_state =
@@ -64,10 +115,12 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
 
   if (trace_state->get(dt_tracestate_key_, trace_state_value)) {
     // we found a DT trace decision in tracestate header
-    if (FW4Tag fw4_tag = FW4Tag::create(trace_state_value); fw4_tag.isValid()) {
-      result.decision = fw4_tag.isIgnored() ? Decision::Drop : Decision::RecordAndSample;
+    if (DynatraceTag dynatrace_tag = DynatraceTag::create(trace_state_value);
+        dynatrace_tag.isValid()) {
+      result.decision = dynatrace_tag.isIgnored() ? Decision::Drop : Decision::RecordAndSample;
+      // TODO: change attribute name and value in scope of OA-26680
       att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] =
-          std::to_string(fw4_tag.getSamplingExponent());
+          std::to_string(dynatrace_tag.getSamplingExponent());
       result.tracestate = parent_context->tracestate();
     }
   } else {
@@ -77,12 +130,13 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     const auto sampling_state = sampling_controller_.getSamplingState(sampling_key);
     const bool sample = sampling_state.shouldSample(hash);
     const auto sampling_exponent = sampling_state.getExponent();
-
+    // TODO: change attribute name and value in scope of OA-26680
     att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(sampling_exponent);
 
     result.decision = sample ? Decision::RecordAndSample : Decision::Drop;
     // create new forward tag and add it to tracestate
-    FW4Tag new_tag = FW4Tag::create(!sample, sampling_exponent, static_cast<uint8_t>(hash));
+    DynatraceTag new_tag =
+        DynatraceTag::create(!sample, sampling_exponent, static_cast<uint8_t>(hash));
     trace_state = trace_state->set(dt_tracestate_key_, new_tag.asString());
     result.tracestate = trace_state->toHeader();
   }

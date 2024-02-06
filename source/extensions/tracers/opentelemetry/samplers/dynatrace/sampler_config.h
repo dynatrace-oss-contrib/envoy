@@ -18,7 +18,7 @@ public:
   uint32_t getRootSpansPerMinute() const { return root_spans_per_minute_.load(); }
 
 private:
-  std::atomic<uint32_t> root_spans_per_minute_ = ROOT_SPANS_PER_MINUTE_DEFAULT;
+  std::atomic<uint32_t> root_spans_per_minute_{ROOT_SPANS_PER_MINUTE_DEFAULT};
 };
 
 } // namespace OpenTelemetry

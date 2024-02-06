@@ -11,13 +11,12 @@ namespace OpenTelemetry {
 void SamplerConfig::parse(const std::string& json) {
   const auto result = Envoy::Json::Factory::loadFromStringNoThrow(json);
   if (result.ok()) {
-    const auto obj = result.value();
+    const auto& obj = result.value();
     if (obj->hasObject("rootSpansPerMinute")) {
       const auto value = obj->getInteger("rootSpansPerMinute", ROOT_SPANS_PER_MINUTE_DEFAULT);
       root_spans_per_minute_.store(value);
       return;
     }
-    (void)obj;
   }
   // didn't get a value, reset to default
   root_spans_per_minute_.store(ROOT_SPANS_PER_MINUTE_DEFAULT);
