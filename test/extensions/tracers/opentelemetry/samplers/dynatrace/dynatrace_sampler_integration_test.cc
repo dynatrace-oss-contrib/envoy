@@ -37,7 +37,7 @@ public:
         name: envoy.tracers.opentelemetry.samplers.dynatrace
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.tracers.opentelemetry.samplers.v3.DynatraceSamplerConfig
-          tenant_id: "abc12345"
+          tenant: "abc12345"
           cluster_id: "980df25c"
   )EOF";
 

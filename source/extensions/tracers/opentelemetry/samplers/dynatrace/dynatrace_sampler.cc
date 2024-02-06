@@ -53,7 +53,7 @@ DynatraceSampler::DynatraceSampler(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config,
     Server::Configuration::TracerFactoryContext& context,
     SamplerConfigFetcherPtr sampler_config_fetcher)
-    : dt_tracestate_key_(absl::StrCat(calculateTenantId(config.tenant_id()), "-",
+    : dt_tracestate_key_(absl::StrCat(calculateTenantId(config.tenant()), "-",
                                       absl::string_view(config.cluster_id()), "@dt")),
       sampling_controller_(std::move(sampler_config_fetcher)) {
 
