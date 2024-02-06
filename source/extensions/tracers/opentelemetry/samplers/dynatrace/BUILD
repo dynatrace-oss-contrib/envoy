@@ -35,6 +35,7 @@ envoy_cc_library(
         "sampler_config_fetcher.h",
         "sampling_controller.h",
         "stream_summary.h",
+        "tenant_id.h",
     ],
     deps = [
         "//source/common/config:datasource_lib",
