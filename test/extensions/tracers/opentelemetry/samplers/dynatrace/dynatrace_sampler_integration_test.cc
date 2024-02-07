@@ -37,7 +37,7 @@ public:
         name: envoy.tracers.opentelemetry.samplers.dynatrace
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.tracers.opentelemetry.samplers.v3.DynatraceSamplerConfig
-          tenant_id: "9712ad40"
+          tenant: "abc12345"
           cluster_id: "980df25c"
   )EOF";
 
@@ -82,7 +82,11 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithTraceparentAndTracestate) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;1;0,key=value", tracestate_value);
+  // use StartsWith because pathinfo (last element in trace state contains a random value)
+  EXPECT_TRUE(absl::StartsWith(tracestate_value, "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;"))
+      << "Received tracestate: " << tracestate_value;
+  EXPECT_TRUE(absl::StrContains(tracestate_value, ",key=value"))
+      << "Received tracestate: " << tracestate_value;
 }
 
 // Sends a request with traceparent but no tracestate header.
@@ -110,7 +114,9 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithTraceparentOnly) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;1;0", tracestate_value);
+  // use StartsWith because pathinfo (last element in trace state contains a random value)
+  EXPECT_TRUE(absl::StartsWith(tracestate_value, "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;"))
+      << "Received tracestate: " << tracestate_value;
 }
 
 // Sends a request without traceparent and tracestate header.
@@ -133,7 +139,8 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithoutTraceparentAndTracestate) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  EXPECT_EQ("9712ad40-980df25c@dt=fw4;0;0;0;0;0;1;0", tracestate_value);
+  EXPECT_TRUE(absl::StartsWith(tracestate_value, "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;"))
+      << "Received tracestate: " << tracestate_value;
 }
 
 } // namespace

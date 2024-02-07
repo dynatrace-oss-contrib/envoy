@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -21,11 +22,20 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
-class SamplerConfigFetcher : public Logger::Loggable<Logger::Id::tracing>,
-                             public Http::AsyncClient::Callbacks {
+class SamplerConfigFetcher {
 public:
-  SamplerConfigFetcher(Server::Configuration::TracerFactoryContext& context,
-                       const envoy::config::core::v3::HttpUri& http_uri, const std::string& token);
+  virtual ~SamplerConfigFetcher() = default;
+
+  virtual const SamplerConfig& getSamplerConfig() const = 0;
+};
+
+class SamplerConfigFetcherImpl : public SamplerConfigFetcher,
+                                 public Logger::Loggable<Logger::Id::tracing>,
+                                 public Http::AsyncClient::Callbacks {
+public:
+  SamplerConfigFetcherImpl(Server::Configuration::TracerFactoryContext& context,
+                           const envoy::config::core::v3::HttpUri& http_uri,
+                           const std::string& token);
 
   void onSuccess(const Http::AsyncClient::Request& request,
                  Http::ResponseMessagePtr&& response) override;
@@ -35,9 +45,9 @@ public:
   void onBeforeFinalizeUpstreamSpan(Envoy::Tracing::Span& /*span*/,
                                     const Http::ResponseHeaderMap* /*response_headers*/) override{};
 
-  const SamplerConfig& getSamplerConfig() const { return sampler_config_; }
+  const SamplerConfig& getSamplerConfig() const override { return sampler_config_; }
 
-  ~SamplerConfigFetcher() override;
+  ~SamplerConfigFetcherImpl() override;
 
 private:
   Event::TimerPtr timer_;
@@ -49,6 +59,8 @@ private:
 
   void onRequestDone();
 };
+
+using SamplerConfigFetcherPtr = std::unique_ptr<SamplerConfigFetcher>;
 
 } // namespace OpenTelemetry
 } // namespace Tracers
