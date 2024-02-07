@@ -21,7 +21,6 @@ namespace OpenTelemetry {
 namespace {
 
 constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
-const char* SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME = "sampling_extrapolation_set_in_sampler";
 
 class DynatraceTag {
 public:
@@ -73,6 +72,26 @@ private:
   uint32_t path_info_;
 };
 
+// add Dynatrace specific span attributes
+void addSamplingAttributes(uint32_t sampling_exponent,
+                           std::map<std::string, std::string>& attributes) {
+
+  const auto multiplicity = SamplingState::toMultiplicity(sampling_exponent);
+  // The denominator of the sampling ratio. If for example the Dynatrace OneAgent samples with a
+  // probability the value of supportability.atm_sampling_ratio would be 16
+  // ratio is also called multiplicity
+  attributes["supportability.atm_sampling_ratio"] = std::to_string(multiplicity);
+
+  if (multiplicity > 1) {
+    static constexpr uint64_t two_pow_56 = 1lu << 56; // 2^56
+    // The sampling probability can be interpreted as the number of spans
+    // that are discarded out of 2^56. The attribute is only available if the sampling.threshold is
+    // not 0 and therefore sampling happened.
+    const uint64_t sampling_threshold = two_pow_56 - two_pow_56 / multiplicity;
+    attributes["sampling.threshold"] = std::to_string(sampling_threshold);
+  }
+}
+
 } // namespace
 
 DynatraceSampler::DynatraceSampler(
@@ -118,9 +137,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     if (DynatraceTag dynatrace_tag = DynatraceTag::create(trace_state_value);
         dynatrace_tag.isValid()) {
       result.decision = dynatrace_tag.isIgnored() ? Decision::Drop : Decision::RecordAndSample;
-      // TODO: change attribute name and value in scope of OA-26680
-      att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] =
-          std::to_string(dynatrace_tag.getSamplingExponent());
+      addSamplingAttributes(dynatrace_tag.getSamplingExponent(), att);
       result.tracestate = parent_context->tracestate();
     }
   } else {
@@ -130,8 +147,8 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     const auto sampling_state = sampling_controller_.getSamplingState(sampling_key);
     const bool sample = sampling_state.shouldSample(hash);
     const auto sampling_exponent = sampling_state.getExponent();
-    // TODO: change attribute name and value in scope of OA-26680
-    att[SAMPLING_EXTRAPOLATION_SPAN_ATTRIBUTE_NAME] = std::to_string(sampling_exponent);
+
+    addSamplingAttributes(sampling_exponent, att);
 
     result.decision = sample ? Decision::RecordAndSample : Decision::Drop;
     // create new forward tag and add it to tracestate
