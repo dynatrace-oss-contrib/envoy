@@ -18,7 +18,7 @@ namespace OpenTelemetry {
 class DynatraceSamplerFactory : public SamplerFactory {
 public:
   /**
-   * @brief Create a Sampler which samples every span
+   * @brief Create a Dynatrace sampler
    *
    * @param context
    * @return SamplerSharedPtr

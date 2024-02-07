@@ -16,7 +16,7 @@ option (udpa.annotations.file_status).package_version_status = ACTIVE;
 // [#extension: envoy.tracers.opentelemetry.samplers.dynatrace]
 
 message DynatraceSamplerConfig {
-  string tenant_id = 1;
+  string tenant = 1;
 
   string cluster_id = 2;
 
