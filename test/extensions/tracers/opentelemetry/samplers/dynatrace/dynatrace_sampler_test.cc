@@ -85,23 +85,7 @@ TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
   EXPECT_TRUE(sampling_result.isSampled());
 }
 
-// Verify sampler being invoked with existing Dynatrace trace state tag set
-TEST_F(DynatraceSamplerTest, TestWithParentContext) {
-  SpanContext parent_context = SpanContext("00", trace_id, "b7ad6b7169203331", true,
-                                           "ot=foo:bar,5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;ad");
-
-  SamplingResult sampling_result =
-      sampler_->shouldSample(parent_context, trace_id, "parent_span",
-                             ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
-  EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
-  EXPECT_EQ(sampling_result.attributes->size(), 1);
-  EXPECT_STREQ(sampling_result.tracestate.c_str(),
-               "ot=foo:bar,5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;ad");
-  EXPECT_TRUE(sampling_result.isRecording());
-  EXPECT_TRUE(sampling_result.isSampled());
-}
-
-// Verify sampler being invoked with parent span context
+// Verify sampler being invoked without a Dynatrace tracestate
 TEST_F(DynatraceSamplerTest, TestWithUnknownParentContext) {
   SpanContext parent_context("00", trace_id, parent_span_id, true, "some_vendor=some_value");
 
@@ -110,13 +94,14 @@ TEST_F(DynatraceSamplerTest, TestWithUnknownParentContext) {
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
+  // Dynatrace tracesate should be prepended
   EXPECT_STREQ(sampling_result.tracestate.c_str(),
                "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95,some_vendor=some_value");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
 
-// Verify sampler being invoked with dynatrace trace parent
+// Verify sampler being invoked with dynatrace trace state
 TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextSampled) {
   SpanContext parent_context("00", trace_id, parent_span_id, true, dt_tracestate_sampled);
 
@@ -125,7 +110,9 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextSampled) {
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
+  // tracestate should be forwarded
   EXPECT_STREQ(sampling_result.tracestate.c_str(), dt_tracestate_sampled);
+  // sampling decision from parent should be respected
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
@@ -139,7 +126,9 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextIgnored) {
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::Drop);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
+  // tracestate should be forwarded
   EXPECT_STREQ(sampling_result.tracestate.c_str(), dt_tracestate_ignored);
+  // sampling decision from parent should be respected
   EXPECT_FALSE(sampling_result.isRecording());
   EXPECT_FALSE(sampling_result.isSampled());
 }
@@ -155,6 +144,7 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextFromDifferentTenant) 
   // sampling decision on tracestate should be ignored because it is from a different tenant.
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_EQ(sampling_result.attributes->size(), 1);
+  // new Dynatrace tag should be prepended, already existing tag should be kept
   const char* exptected =
       "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95,6666ad40-980df25c@dt=fw4;4;4af38366;0;0;1;2;123;"
       "8eae;2h01;3h4af38366;4h00;5h01;6h67a9a23155e1741b5b35368e08e6ece5;7h9d83def9a4939b7b";
@@ -192,29 +182,36 @@ TEST_F(DynatraceSamplerTest, TestWarmup) {
                                          trace_context_1, {});
     result.isSampled() ? sampled++ : ignored++;
   }
-  // should be 50, but the used "random" in shouldSample does not produce the same odd/even numbers.
+  // should be 50 ignored, but the used "random" in shouldSample does not produce the same odd/even
+  // numbers.
   EXPECT_EQ(ignored, 41);
   EXPECT_EQ(sampled, 158);
 
+  // send more requests
   for (int i = 0; i < 100; i++) {
     auto result = sampler_->shouldSample({}, std::to_string(1000 + i), "operation_name",
                                          ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER,
                                          trace_context_1, {});
     result.isSampled() ? sampled++ : ignored++;
   }
+  // exponend should be 2, with a perfect random we would get 25 sampled and 75 ignored.
   EXPECT_EQ(ignored, 113);
   EXPECT_EQ(sampled, 186);
 
+  // send more requests.
   for (int i = 0; i < 700; i++) {
     auto result = sampler_->shouldSample({}, std::to_string(1000 + i), "operation_name",
                                          ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER,
                                          trace_context_1, {});
     result.isSampled() ? sampled++ : ignored++;
   }
+  // with a perfect random, the number of sampled paths would be lower than threshold (200)
+  // We don't care exceeding the threshold because it is not a hard limit
   EXPECT_EQ(ignored, 791);
   EXPECT_EQ(sampled, 208);
 }
 
+// Verify sampling if number of configured spans per minute is exceeded.
 TEST_F(DynatraceSamplerTest, TestSampling) {
   // config should allow 200 root spans per minute
   sampler_config_.parse("{\n \"rootSpansPerMinute\" : 200 \n }");
@@ -229,7 +226,7 @@ TEST_F(DynatraceSamplerTest, TestSampling) {
   trace_context_3.context_method_ = "POST";
   trace_context_3.context_path_ = "/another_path";
 
-  // send  requests
+  // simulate requests
   for (int i = 0; i < 180; i++) {
     sampler_->shouldSample({}, trace_id, "operation_name",
                            ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER,
@@ -243,7 +240,7 @@ TEST_F(DynatraceSamplerTest, TestSampling) {
                          ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, trace_context_3,
                          {});
 
-  // sampler should read update sampling exponents
+  // sampler should update sampling exponents based on number of requests in the previous period
   timer_->invokeCallback();
 
   // the sampler should not sample every span for 'trace_context_1'
@@ -261,7 +258,7 @@ TEST_F(DynatraceSamplerTest, TestSampling) {
   }
   EXPECT_TRUE(ignored);
 
-  // trace_context_3 should be sampled
+  // trace_context_3 should always be sampled.
   for (int i = 0; i < 10; i++) {
     auto result = sampler_->shouldSample({}, std::to_string(i), "operation_name",
                                          ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER,

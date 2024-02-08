@@ -18,8 +18,9 @@ namespace OpenTelemetry {
 
 namespace {
 
+// helper function to compare counters
 template <typename T>
-void CompareCounter(typename std::list<Counter<T>>::iterator counter, T item, uint64_t value,
+void compareCounter(typename std::list<Counter<T>>::iterator counter, T item, uint64_t value,
                     uint64_t error, int line_num) {
   SCOPED_TRACE(absl::StrCat(__FUNCTION__, " called from line ", line_num));
   EXPECT_EQ(counter->getValue(), value);
@@ -29,6 +30,7 @@ void CompareCounter(typename std::list<Counter<T>>::iterator counter, T item, ui
 
 } // namespace
 
+// Test an empty StreamSummary
 TEST(StreamSummaryTest, TestEmpty) {
   StreamSummary<std::string> summary(4);
   EXPECT_EQ(summary.getN(), 0);
@@ -38,6 +40,7 @@ TEST(StreamSummaryTest, TestEmpty) {
   EXPECT_TRUE(summary.validate().ok());
 }
 
+// Test adding values, capacity not exceeded
 TEST(StreamSummaryTest, TestSimple) {
   StreamSummary<char> summary(4);
   summary.offer('a');
@@ -55,23 +58,14 @@ TEST(StreamSummaryTest, TestSimple) {
   auto top_k = summary.getTopK();
   EXPECT_EQ(top_k.size(), 4);
   auto it = top_k.begin();
-  CompareCounter(it, 'a', 4, 0, __LINE__);
-  CompareCounter(++it, 'b', 2, 0, __LINE__);
-  CompareCounter(++it, 'c', 1, 0, __LINE__);
-  CompareCounter(++it, 'd', 1, 0, __LINE__);
+  compareCounter(it, 'a', 4, 0, __LINE__);
+  compareCounter(++it, 'b', 2, 0, __LINE__);
+  compareCounter(++it, 'c', 1, 0, __LINE__);
+  compareCounter(++it, 'd', 1, 0, __LINE__);
 }
 
-// TODO: remove
-template <typename T> std::string toString(T const& list) {
-  std::ostringstream oss;
-  for (auto const& counter : list) {
-    oss << counter.getItem() << ":(" << counter.getValue() << "/" << counter.getError() << ")"
-        << " ";
-  }
-  return oss.str();
-}
-
-TEST(StreamSummaryTest, TestExtendCapacity) {
+// Test adding values, capacity exceeded
+TEST(StreamSummaryTest, TestExceedCapacity) {
   StreamSummary<char> summary(3);
   EXPECT_TRUE(summary.validate().ok());
   summary.offer('d');
@@ -81,7 +75,7 @@ TEST(StreamSummaryTest, TestExtendCapacity) {
   summary.offer('a');
   summary.offer('a');
   summary.offer('b');
-  summary.offer('c');
+  summary.offer('c'); // 'd' will be dropped
   summary.offer('b');
   summary.offer('c');
   EXPECT_TRUE(summary.validate().ok());
@@ -90,23 +84,24 @@ TEST(StreamSummaryTest, TestExtendCapacity) {
     auto top_k = summary.getTopK();
     auto it = top_k.begin();
     EXPECT_EQ(top_k.size(), 3);
-    CompareCounter(it, 'a', 4, 0, __LINE__);
-    CompareCounter(++it, 'b', 3, 0, __LINE__);
-    CompareCounter(++it, 'c', 3, 1, __LINE__);
+    compareCounter(it, 'a', 4, 0, __LINE__);
+    compareCounter(++it, 'b', 3, 0, __LINE__);
+    compareCounter(++it, 'c', 3, 1, __LINE__);
   }
 
-  // add item 'e', 'c' should be removed.
+  // add item 'e', 'c' should be removed. value for 'c' will be added to error for 'e'
   summary.offer('e');
   {
     auto top_k = summary.getTopK();
     auto it = top_k.begin();
     EXPECT_EQ(top_k.size(), 3);
-    CompareCounter(it, 'a', 4, 0, __LINE__);
-    CompareCounter(++it, 'e', 4, 3, __LINE__);
-    CompareCounter(++it, 'b', 3, 0, __LINE__);
+    compareCounter(it, 'a', 4, 0, __LINE__);
+    compareCounter(++it, 'e', 4, 3, __LINE__);
+    compareCounter(++it, 'b', 3, 0, __LINE__);
   }
 }
 
+// Test inserting items in random order. topK should not depend on the insert order.
 TEST(StreamSummaryTest, TestRandomInsertOrder) {
   std::vector<char> v{'a', 'a', 'a', 'a', 'a', 'a', 'b', 'b', 'b', 'b', 'b',
                       'c', 'c', 'c', 'c', 'd', 'd', 'd', 'e', 'e', 'f'};
@@ -119,16 +114,17 @@ TEST(StreamSummaryTest, TestRandomInsertOrder) {
     }
     auto top_k = summary.getTopK();
     auto it = top_k.begin();
-    CompareCounter(it, 'a', 6, 0, __LINE__);
-    CompareCounter(++it, 'b', 5, 0, __LINE__);
-    CompareCounter(++it, 'c', 4, 0, __LINE__);
-    CompareCounter(++it, 'd', 3, 0, __LINE__);
-    CompareCounter(++it, 'e', 2, 0, __LINE__);
-    CompareCounter(++it, 'f', 1, 0, __LINE__);
+    compareCounter(it, 'a', 6, 0, __LINE__);
+    compareCounter(++it, 'b', 5, 0, __LINE__);
+    compareCounter(++it, 'c', 4, 0, __LINE__);
+    compareCounter(++it, 'd', 3, 0, __LINE__);
+    compareCounter(++it, 'e', 2, 0, __LINE__);
+    compareCounter(++it, 'f', 1, 0, __LINE__);
   }
 }
 
-TEST(StreamSummaryTest, TestGetK) {
+// Test getTopK size parameter is handled as expected
+TEST(StreamSummaryTest, TestGetTopKSize) {
   std::vector<char> v{'a', 'a', 'a', 'a', 'a', 'a', 'b', 'b', 'b', 'b', 'b',
                       'c', 'c', 'c', 'c', 'd', 'd', 'd', 'e', 'e', 'f'};
   std::shuffle(v.begin(), v.end(), std::default_random_engine());
