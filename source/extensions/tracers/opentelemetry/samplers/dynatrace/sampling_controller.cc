@@ -80,6 +80,7 @@ SamplingState SamplingController::getSamplingState(const std::string& sampling_k
 
 std::string SamplingController::getSamplingKey(const absl::string_view path_query,
                                                const absl::string_view method) {
+  // remove query part (truncate after first '?')
   const size_t query_offset = path_query.find('?');
   auto path =
       path_query.substr(0, query_offset != path_query.npos ? query_offset : path_query.size());
@@ -141,14 +142,14 @@ void SamplingController::calculateSamplingExponents(
       sampling_state->second.increaseExponent();
     }
     if (wanted_multiplicity < sampling_state->second.getMultiplicity()) {
-      // we want to have multiplicity <= wanted_multiplicity, therefore exponent is decrease once.
+      // we want to have multiplicity <= wanted_multiplicity, therefore exponent is decreased once.
       sampling_state->second.decreaseExponent();
     }
   }
 
   auto effective_count = calculateEffectiveCount(top_k, new_sampling_exponents);
   // There might be entries where allowed_per_entry is greater than their count.
-  // Therefore, we would sample nubmer of total_wanted requests
+  // Therefore, we would sample less than total_wanted.
   // To avoid this, we decrease the exponent of other entries if possible
   if (effective_count < total_wanted) {
     for (int i = 0; i < 5; i++) { // max tries

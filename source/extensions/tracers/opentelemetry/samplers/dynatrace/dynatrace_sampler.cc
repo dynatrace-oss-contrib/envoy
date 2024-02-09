@@ -22,14 +22,25 @@ namespace {
 
 constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
 
+/**
+ * @brief Helper for creating and reading the Dynatrace tag in the tracestate http header
+ * This tag has at least 8 values delimited by semicolon:
+ * - tag[0]: version (currently fw4)
+ * - tag[1] - tag[4]: unused in the sampler (always 0)
+ * - tag[5]: ignored field. 1 if a span is ignored (not sampled), 0 otherwise
+ * - tag[6]: sampling exponent
+ * - tag[7]: path info
+ */
 class DynatraceTag {
 public:
   static DynatraceTag createInvalid() { return {false, false, 0, 0}; }
 
+  // Creates a tag using the given values.
   static DynatraceTag create(bool ignored, uint32_t sampling_exponent, uint32_t path_info) {
     return {true, ignored, sampling_exponent, path_info};
   }
 
+  // Creates a tag from a string.
   static DynatraceTag create(const std::string& value) {
     std::vector<absl::string_view> tracestate_components =
         absl::StrSplit(value, ';', absl::AllowEmpty());
@@ -50,15 +61,17 @@ public:
     return createInvalid();
   }
 
+  // Returns a Dynatrace tag as string.
   std::string asString() const {
     std::string ret = absl::StrCat("fw4;0;0;0;0;", ignored_ ? "1" : "0", ";", sampling_exponent_,
                                    ";", absl::Hex(path_info_));
     return ret;
   }
 
+  // Returns true if parsing was successful.
   bool isValid() const { return valid_; };
   bool isIgnored() const { return ignored_; };
-  int getSamplingExponent() const { return sampling_exponent_; };
+  uint32_t getSamplingExponent() const { return sampling_exponent_; };
   uint32_t getPathInfo() const { return path_info_; };
 
 private:
@@ -102,6 +115,7 @@ DynatraceSampler::DynatraceSampler(
                                       absl::Hex(config.cluster_id()), "@dt")),
       sampling_controller_(std::move(sampler_config_fetcher)) {
 
+  // start a timer to periodically update sampling information
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     sampling_controller_.update();
     timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);
@@ -124,7 +138,6 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
           ? sampling_controller_.getSamplingKey(trace_context->path(), trace_context->method())
           : "";
 
-  // add it to stream summary containing the number of requests
   sampling_controller_.offer(sampling_key);
 
   auto trace_state = opentelemetry::trace::TraceState::FromHeader(
@@ -133,7 +146,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
   std::string trace_state_value;
 
   if (trace_state->Get(dt_tracestate_key_, trace_state_value)) {
-    // we found a DT trace decision in tracestate header
+    // we found a Dynatrace tag in the tracestate header. Respect the sampling decision in the tag.
     if (DynatraceTag dynatrace_tag = DynatraceTag::create(trace_state_value);
         dynatrace_tag.isValid()) {
       result.decision = dynatrace_tag.isIgnored() ? Decision::Drop : Decision::RecordAndSample;
@@ -142,7 +155,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     }
   } else {
     // do a decision based on the calculated exponent
-    // at the moment we use a hash of the trace_id as random number
+    // we use a hash of the trace_id as random number
     const auto hash = MurmurHash::murmurHash2(trace_id);
     const auto sampling_state = sampling_controller_.getSamplingState(sampling_key);
     const bool sample = sampling_state.shouldSample(hash);
@@ -151,7 +164,7 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     addSamplingAttributes(sampling_exponent, att);
 
     result.decision = sample ? Decision::RecordAndSample : Decision::Drop;
-    // create new forward tag and add it to tracestate
+    // create a new Dynatrace tag and add it to tracestate
     DynatraceTag new_tag =
         DynatraceTag::create(!sample, sampling_exponent, static_cast<uint8_t>(hash));
     trace_state = trace_state->Set(dt_tracestate_key_, new_tag.asString());

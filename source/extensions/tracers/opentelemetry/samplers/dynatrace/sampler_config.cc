@@ -18,7 +18,7 @@ void SamplerConfig::parse(const std::string& json) {
       return;
     }
   }
-  // didn't get a value, reset to default
+  // Didn't get a value, reset to default
   root_spans_per_minute_.store(default_root_spans_per_minute_);
 }
 

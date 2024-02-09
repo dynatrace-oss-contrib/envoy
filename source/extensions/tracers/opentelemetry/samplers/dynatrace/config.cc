@@ -28,7 +28,7 @@ DynatraceSamplerFactory::createSampler(const Protobuf::Message& config,
 }
 
 /**
- * Static registration for the Env sampler factory. @see RegisterFactory.
+ * Static registration for the Dynatrace sampler factory. @see RegisterFactory.
  */
 REGISTER_FACTORY(DynatraceSamplerFactory, SamplerFactory);
 

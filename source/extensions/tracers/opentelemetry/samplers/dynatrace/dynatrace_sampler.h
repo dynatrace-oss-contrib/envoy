@@ -20,7 +20,11 @@ namespace Tracers {
 namespace OpenTelemetry {
 
 /**
- * @brief A Dynatrace specific sampler
+ * @brief A Dynatrace specific sampler.
+ *
+ * For sampling, the requests are categorized based on the http method and the http path.
+ * A sampling multiplicity is calculated for every request category based on the
+ * number of requests. A Dynatrace specific tag is added to the http tracestate header.
  */
 class DynatraceSampler : public Sampler, Logger::Loggable<Logger::Id::tracing> {
 public:
@@ -29,6 +33,7 @@ public:
       Server::Configuration::TracerFactoryContext& context,
       SamplerConfigFetcherPtr sampler_config_fetcher);
 
+  /** @see Sampler#shouldSample */
   SamplingResult shouldSample(const absl::optional<SpanContext> parent_context,
                               const std::string& trace_id, const std::string& name,
                               OTelSpanKind spankind,
@@ -38,8 +43,8 @@ public:
   std::string getDescription() const override;
 
 private:
-  std::string dt_tracestate_key_;
-  Event::TimerPtr timer_;
+  std::string dt_tracestate_key_; // used as key in the http tracesate header
+  Event::TimerPtr timer_;         // used to periodically calculate sampling multiplicity
   SamplingController sampling_controller_;
 };
 

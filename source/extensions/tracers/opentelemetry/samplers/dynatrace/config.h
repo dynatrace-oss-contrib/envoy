@@ -18,9 +18,10 @@ namespace OpenTelemetry {
 class DynatraceSamplerFactory : public SamplerFactory {
 public:
   /**
-   * @brief Create a Dynatrace sampler
+   * @brief Creates a Dynatrace sampler
    *
-   * @param context
+   * @param config The sampler configuration
+   * @param context The tracer factory context.
    * @return SamplerSharedPtr
    */
   SamplerSharedPtr createSampler(const Protobuf::Message& config,

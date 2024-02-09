@@ -13,8 +13,13 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+/**
+ * @brief Container for sampling exponent / multiplicity.
+ *
+ */
 class SamplingState {
 public:
+  // Convert exponent to multiplicity
   [[nodiscard]] static uint32_t toMultiplicity(uint32_t exponent) { return 1 << exponent; }
   [[nodiscard]] uint32_t getExponent() const { return exponent_; }
   [[nodiscard]] uint32_t getMultiplicity() const { return toMultiplicity(exponent_); }
@@ -29,6 +34,12 @@ public:
 
   SamplingState() = default;
 
+  /**
+   * @brief Does a sampling decision based on random_nr and multiplicity
+   *
+   * @param random_nr Random number used for sampling decision.
+   * @return true if request should be sampled, false otherwise
+   */
   bool shouldSample(const uint64_t random_nr) const { return (random_nr % getMultiplicity() == 0); }
 
 private:
@@ -38,6 +49,11 @@ private:
 using StreamSummaryT = StreamSummary<std::string>;
 using TopKListT = std::list<Counter<std::string>>;
 
+/**
+ * @brief Counts the requests per sampling key in the current period. Calculates the sampling
+ * exponents based on the request count in the latest period.
+ *
+ */
 class SamplingController : public Logger::Loggable<Logger::Id::tracing> {
 
 public:
@@ -45,14 +61,42 @@ public:
       : stream_summary_(std::make_unique<StreamSummaryT>(STREAM_SUMMARY_SIZE)),
         sampler_config_fetcher_(std::move(sampler_config_fetcher)) {}
 
+  /**
+   * @brief Trigger calculating the sampling exponents based on the reuqest count since last update
+   *
+   */
   void update();
 
+  /**
+   * @brief Get the Sampling State object for a sampling key
+   *
+   * @param sampling_key Sampling Key to search for
+   * @return SamplingState Current Sampling State for key
+   */
   SamplingState getSamplingState(const std::string& sampling_key) const;
 
+  /**
+   * @brief Returns the number of spans which would have been sampled in the last period using the
+   * current sampling states
+   *
+   * @return effective count
+   */
   uint64_t getEffectiveCount() const;
 
+  /**
+   * @brief Counts the occurrence of sampling_key
+   *
+   * @param sampling_key Sampling Key used to categorize the request
+   */
   void offer(const std::string& sampling_key);
 
+  /**
+   * @brief Creates the Sampling Key which is used to categorize a request
+   *
+   * @param path_query The request path. May contain the query.
+   * @param method The request method.
+   * @return The sampling key.
+   */
   static std::string getSamplingKey(const absl::string_view path_query,
                                     const absl::string_view method);
 

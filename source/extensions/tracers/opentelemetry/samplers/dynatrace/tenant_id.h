@@ -13,6 +13,13 @@ namespace OpenTelemetry {
 
 namespace {
 
+/**
+ * @brief Calculates a Dynatrace specific tenant id which is used in the Dynatrace tag added to the
+ * tracestate header.
+ *
+ * @param file_name The tenant as received via config file
+ * @return the tenant id as Hex
+ */
 absl::Hex calculateTenantId(std::string tenant_uuid) {
   if (tenant_uuid.empty()) {
     return absl::Hex(0);
