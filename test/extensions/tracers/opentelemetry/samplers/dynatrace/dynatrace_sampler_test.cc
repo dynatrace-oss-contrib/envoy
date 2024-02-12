@@ -131,7 +131,6 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextIgnored) {
       sampler_->shouldSample(parent_context, trace_id, "operation_name",
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::Drop);
-  EXPECT_EQ(sampling_result.attributes->size(), 1);
   EXPECT_EQ(sampling_result.attributes->size(), 2);
   EXPECT_STREQ(
       sampling_result.attributes->find("supportability.atm_sampling_ratio")->second.c_str(), "4");
