@@ -67,7 +67,7 @@ MATCHER_P(MessageMatcher, unusedArg, "") {
 TEST_F(SamplerConfigFetcherTest, TestRequestIsSent) {
   EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
-              send_(MessageMatcher("unused-but-matchet-requires-an-arg"), _, _));
+              send_(MessageMatcher("unused"), _, _));
   SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenval");
   timer_->invokeCallback();
 }
