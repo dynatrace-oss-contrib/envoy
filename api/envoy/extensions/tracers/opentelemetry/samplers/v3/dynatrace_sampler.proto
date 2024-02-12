@@ -28,6 +28,6 @@ message DynatraceSamplerConfig {
   string token = 4;
 
   // Default number of root spans per minute allowed by the sampler.
-  // The value is used if the number can't be requested from the Dynatrace cluster.
+  // The value is used if the number can't be requested from the Dynatrace API.
   uint32 root_spans_per_minute = 5;
 }
