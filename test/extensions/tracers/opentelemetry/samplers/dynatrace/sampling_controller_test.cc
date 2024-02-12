@@ -18,6 +18,7 @@ namespace OpenTelemetry {
 
 namespace {
 
+// helper to offer a value multiple times to SamplingController
 void offerEntry(SamplingController& sc, const std::string& value, int count) {
   for (int i = 0; i < count; i++) {
     sc.offer(value);
@@ -28,13 +29,12 @@ void offerEntry(SamplingController& sc, const std::string& value, int count) {
 
 class TestSamplerConfigFetcher : public SamplerConfigFetcher {
 public:
-  const SamplerConfig& getSamplerConfig() const { return config; }
+  const SamplerConfig& getSamplerConfig() const override { return config; }
   SamplerConfig config;
 };
 
-class SamplingControllerTest : public testing::Test {};
-
-TEST_F(SamplingControllerTest, TestManyDifferentRequests) {
+// Test with multiple different sampling keys (StreamSummary size exceeded)
+TEST(SamplingControllerTest, TestStreamSummarySizeExceeded) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));
 
@@ -43,6 +43,7 @@ TEST_F(SamplingControllerTest, TestManyDifferentRequests) {
   offerEntry(sc, "3", 750);
   offerEntry(sc, "4", 100);
   offerEntry(sc, "5", 50);
+  // add unique sampling keys
   for (int64_t i = 0; i < 2100; i++) {
     sc.offer(std::to_string(i + 1000000));
   }
@@ -60,7 +61,8 @@ TEST_F(SamplingControllerTest, TestManyDifferentRequests) {
   EXPECT_EQ(sc.getSamplingState("1000002").getMultiplicity(), 2);
 }
 
-TEST_F(SamplingControllerTest, TestManyRequests) {
+// Test with StreamSummary size not exceeded
+TEST(SamplingControllerTest, TestStreamSummarySizeNotExceeded) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));
 
@@ -86,7 +88,8 @@ TEST_F(SamplingControllerTest, TestManyRequests) {
   EXPECT_EQ(sc.getSamplingState("8").getMultiplicity(), 1);
 }
 
-TEST_F(SamplingControllerTest, TestSomeRequests) {
+// Test with StreamSummary size not exceeded
+TEST(SamplingControllerTest, TestStreamSummarySizeNotExceeded1) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));
 
@@ -113,7 +116,8 @@ TEST_F(SamplingControllerTest, TestSomeRequests) {
   EXPECT_EQ(sc.getSamplingState("1000003").getMultiplicity(), 1);
 }
 
-TEST_F(SamplingControllerTest, TestSimple) {
+// Test using a sampler config having non-default root spans per minute
+TEST(SamplingControllerTest, TestNonDefaultRootSpansPerMinute) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   scf->config.parse("{\n \"rootSpansPerMinute\" : 100 \n }");
   SamplingController sc(std::move(scf));
@@ -134,55 +138,61 @@ TEST_F(SamplingControllerTest, TestSimple) {
   EXPECT_EQ(sc.getSamplingState("GET_asdf").getMultiplicity(), 2);
 }
 
-TEST_F(SamplingControllerTest, TestWarmup) {
+// Test warm up phase (no SamplingState available)
+TEST(SamplingControllerTest, TestWarmup) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));
 
   // offer entries, but don't call update();
   // sampling exponents table will be empty
-  // exponent will be calculated based on count.
+  // exponent will be calculated based on total count.
+  // same exponent for both exising and non-excisting keys.
+
   offerEntry(sc, "GET_0", 10);
+  EXPECT_EQ(sc.getSamplingState("GET_0").getExponent(), 0);
   EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 0);
   EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 0);
-  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 0);
 
   offerEntry(sc, "GET_1", 540);
+  // threshold/2 reached, sampling exponent is set to 1
   EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 1);
   EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 1);
   EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 1);
 
-  offerEntry(sc, "GET_0", 300);
-  EXPECT_EQ(sc.getSamplingState("GET_0").getExponent(), 1);
+  offerEntry(sc, "GET_2", 300);
   EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 1);
-  EXPECT_EQ(sc.getSamplingState("GET_10").getExponent(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 1);
+  EXPECT_EQ(sc.getSamplingState("GET_123").getExponent(), 1);
 
   offerEntry(sc, "GET_4", 550);
   EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 2);
-  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 2);
-  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 2);
+  EXPECT_EQ(sc.getSamplingState("GET_4").getExponent(), 2);
+  EXPECT_EQ(sc.getSamplingState("GET_234").getExponent(), 2);
 
   offerEntry(sc, "GET_5", 1000);
   EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 4);
-  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 4);
-  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 4);
+  EXPECT_EQ(sc.getSamplingState("GET_5").getExponent(), 4);
+  EXPECT_EQ(sc.getSamplingState("GET_456").getExponent(), 4);
 
-  offerEntry(sc, "GET_7", 2000);
+  offerEntry(sc, "GET_6", 2000);
   EXPECT_EQ(sc.getSamplingState("GET_1").getExponent(), 8);
-  EXPECT_EQ(sc.getSamplingState("GET_2").getExponent(), 8);
-  EXPECT_EQ(sc.getSamplingState("GET_3").getExponent(), 8);
+  EXPECT_EQ(sc.getSamplingState("GET_6").getExponent(), 8);
+  EXPECT_EQ(sc.getSamplingState("GET_789").getExponent(), 8);
 }
 
-TEST_F(SamplingControllerTest, TestEmpty) {
+// Test getting sampling state from an empty SamplingController
+TEST(SamplingControllerTest, TestEmpty) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));
 
   sc.update();
-
+  // default SamplingState is expected
   EXPECT_EQ(sc.getSamplingState("GET_something").getExponent(), 0);
   EXPECT_EQ(sc.getSamplingState("GET_something").getMultiplicity(), 1);
 }
 
-TEST_F(SamplingControllerTest, TestNonExisting) {
+// Test getting sampling state for an unknwon key from a non-empty SamplingController
+TEST(SamplingControllerTest, TestUnknown) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));
 
@@ -191,8 +201,19 @@ TEST_F(SamplingControllerTest, TestNonExisting) {
 
   EXPECT_EQ(sc.getSamplingState("key2").getExponent(), 0);
   EXPECT_EQ(sc.getSamplingState("key2").getMultiplicity(), 1);
+
+  // Exceed capacity,
+  for (uint32_t i = 0; i < SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT * 2; i++) {
+    sc.offer("key1");
+  }
+  sc.update();
+  // "key1" will get exponent 1
+  EXPECT_EQ(sc.getSamplingState("key1").getExponent(), 1);
+  // unknown "key2" will get the same exponent
+  EXPECT_EQ(sc.getSamplingState("key2").getExponent(), 1);
 }
 
+// Test increasing and decreasing sampling exponent
 TEST(SamplingStateTest, TestIncreaseDecrease) {
   SamplingState sst{};
   EXPECT_EQ(sst.getExponent(), 0);
@@ -217,14 +238,17 @@ TEST(SamplingStateTest, TestIncreaseDecrease) {
   EXPECT_EQ(sst.getMultiplicity(), 128);
 }
 
+// Test SamplingState shouldSample()
 TEST(SamplingStateTest, TestShouldSample) {
-  // default sampling state should sample
+  // default sampling state should sample every request
   SamplingState sst{};
   EXPECT_TRUE(sst.shouldSample(1234));
+  EXPECT_TRUE(sst.shouldSample(2345));
   EXPECT_TRUE(sst.shouldSample(3456));
-  EXPECT_TRUE(sst.shouldSample(12345));
+  EXPECT_TRUE(sst.shouldSample(4567));
 
-  // exponent 2, multiplicity 1, even (=not odd) random numbers should be sampled
+  // exponent 1, multiplicity 2,
+  // we are using % for sampling decision, so even (=not odd) random numbers should be sampled
   sst.increaseExponent();
   EXPECT_TRUE(sst.shouldSample(22));
   EXPECT_TRUE(sst.shouldSample(4444444));
@@ -245,7 +269,8 @@ TEST(SamplingStateTest, TestShouldSample) {
   EXPECT_FALSE(sst.shouldSample(2049));
 }
 
-TEST_F(SamplingControllerTest, TestGetSamplingKey) {
+// Test creating sampling key used to identify a request
+TEST(SamplingControllerTest, TestGetSamplingKey) {
   std::string key = SamplingController::getSamplingKey("somepath", "GET");
   EXPECT_STREQ(key.c_str(), "GET_somepath");
 
@@ -254,6 +279,12 @@ TEST_F(SamplingControllerTest, TestGetSamplingKey) {
 
   key = SamplingController::getSamplingKey("anotherpath", "PUT");
   EXPECT_STREQ(key.c_str(), "PUT_anotherpath");
+
+  key = SamplingController::getSamplingKey("", "PUT");
+  EXPECT_STREQ(key.c_str(), "PUT_");
+
+  key = SamplingController::getSamplingKey("anotherpath", "");
+  EXPECT_STREQ(key.c_str(), "_anotherpath");
 }
 
 } // namespace OpenTelemetry
