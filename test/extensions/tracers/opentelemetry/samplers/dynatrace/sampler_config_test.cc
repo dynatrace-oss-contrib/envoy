@@ -12,7 +12,8 @@ namespace OpenTelemetry {
 
 // Test sampler config json parsing
 TEST(SamplerConfigTest, test) {
-  SamplerConfig config;
+  // default_root_spans_per_minute not set, ROOT_SPANS_PER_MINUTE_DEFAULT should be used
+  SamplerConfig config(0);
   config.parse("{\n \"rootSpansPerMinute\" : 2000 \n }");
   EXPECT_EQ(config.getRootSpansPerMinute(), 2000u);
   config.parse("{\n \"rootSpansPerMinute\" : 10000 \n }");
@@ -33,6 +34,28 @@ TEST(SamplerConfigTest, test) {
 
   config.parse(" } ");
   EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+}
+
+// Test sampler config default root spans per minute
+TEST(SamplerConfigTest, TestDefaultRootSpansParameter) {
+  {
+    SamplerConfig config(0);
+    EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+    config.parse(" { "); // parse invalid json, default value should still be used
+    EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+  }
+  {
+    SamplerConfig config(900);
+    EXPECT_EQ(config.getRootSpansPerMinute(), 900);
+    config.parse(" { ");
+    EXPECT_EQ(config.getRootSpansPerMinute(), 900);
+  }
+  {
+    SamplerConfig config(SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+    EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+    config.parse(" { ");
+    EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+  }
 }
 
 } // namespace OpenTelemetry

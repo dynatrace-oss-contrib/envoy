@@ -35,7 +35,7 @@ class SamplerConfigFetcherImpl : public SamplerConfigFetcher,
 public:
   SamplerConfigFetcherImpl(Server::Configuration::TracerFactoryContext& context,
                            const envoy::config::core::v3::HttpUri& http_uri,
-                           const std::string& token);
+                           const std::string& token, uint32_t default_root_spans_per_minute);
 
   void onSuccess(const Http::AsyncClient::Request& request,
                  Http::ResponseMessagePtr&& response) override;

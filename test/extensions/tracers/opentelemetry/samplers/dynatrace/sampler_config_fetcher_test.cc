@@ -68,13 +68,15 @@ TEST_F(SamplerConfigFetcherTest, TestRequestIsSent) {
   EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
               send_(MessageMatcher("unused-but-machtes-requires-an-arg"), _, _));
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenval");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenval",
+                                          SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
 }
 
 // Test receiving a response with code 200 and valid json
 TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
+                                          SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -87,7 +89,8 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
 
 // Test receiving a response with code 200 and unexpected json
 TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
+                                          SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -101,7 +104,8 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
 
 // Test receiving a response with code != 200
 TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
+                                          SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -115,7 +119,8 @@ TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
 
 // Test sending failed
 TEST_F(SamplerConfigFetcherTest, TestOnFailure) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
+                                          SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
   config_fetcher.onFailure(request_, Http::AsyncClient::FailureReason::Reset);
   EXPECT_EQ(config_fetcher.getSamplerConfig().getRootSpansPerMinute(),
@@ -126,7 +131,8 @@ TEST_F(SamplerConfigFetcherTest, TestOnFailure) {
 // Test calling onBeforeFinalizeUpstreamSpan
 TEST_F(SamplerConfigFetcherTest, TestOnBeforeFinalizeUpstreamSpan) {
   Tracing::MockSpan child_span_;
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
+                                          SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   // onBeforeFinalizeUpstreamSpan() is an empty method, nothing should happen
   config_fetcher.onBeforeFinalizeUpstreamSpan(child_span_, nullptr);
 }
@@ -137,7 +143,8 @@ TEST_F(SamplerConfigFetcherTest, TestNoCluster) {
   ON_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_,
           getThreadLocalCluster(_))
       .WillByDefault(Return(nullptr));
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
+                                          SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
   // should not crash or throw.
 }
