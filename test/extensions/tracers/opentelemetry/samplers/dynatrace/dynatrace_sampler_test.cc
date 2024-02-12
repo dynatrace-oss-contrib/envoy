@@ -194,7 +194,7 @@ TEST_F(DynatraceSamplerTest, TestWarmup) {
                                          trace_context_1, {});
     result.isSampled() ? sampled++ : ignored++;
   }
-  // exponend should be 2, with a perfect random we would get 25 sampled and 75 ignored.
+  // exponent should be 2, with a perfect random we would get 25 sampled and 75 ignored.
   EXPECT_EQ(ignored, 113);
   EXPECT_EQ(sampled, 186);
 
