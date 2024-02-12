@@ -9,16 +9,16 @@ namespace Tracers {
 namespace OpenTelemetry {
 
 // Test calculation using an empty string
-TEST(TenantIdTest, testEmpty) { EXPECT_EQ(absl::StrCat(calculateTenantId("")), "0"); }
+TEST(TenantIdTest, TestEmpty) { EXPECT_EQ(absl::StrCat(calculateTenantId("")), "0"); }
 
 // Test calculation using strings with whitespace
-TEST(TenantIdTest, testWhitespace) {
+TEST(TenantIdTest, TestWhitespace) {
   EXPECT_EQ(absl::StrCat(calculateTenantId("abc 1234")), "182ccac");
   EXPECT_EQ(absl::StrCat(calculateTenantId("      ")), "b173ef2e");
 }
 
 // Test calculation using some expected strings
-TEST(TenantIdTest, testValues) {
+TEST(TenantIdTest, TestValues) {
   EXPECT_EQ(absl::StrCat(calculateTenantId("jmw13303")), "4d10bede");
   EXPECT_EQ(absl::StrCat(calculateTenantId("abc12345")), "5b3f9fed");
   EXPECT_EQ(absl::StrCat(calculateTenantId("?pfel")), "7712d29d");

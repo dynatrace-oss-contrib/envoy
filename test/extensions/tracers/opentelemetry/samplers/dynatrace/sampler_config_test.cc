@@ -11,7 +11,7 @@ namespace Tracers {
 namespace OpenTelemetry {
 
 // Test sampler config json parsing
-TEST(SamplerConfigTest, test) {
+TEST(SamplerConfigTest, TestParsing) {
   SamplerConfig config;
   config.parse("{\n \"rootSpansPerMinute\" : 2000 \n }");
   EXPECT_EQ(config.getRootSpansPerMinute(), 2000u);
@@ -31,7 +31,13 @@ TEST(SamplerConfigTest, test) {
   config.parse(" { ");
   EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 
-  config.parse(" } ");
+  config.parse("{\n \"rootSpansPerMinute\" : 10000 "); // closing } is missing
+  EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+}
+
+// Test default sampler config (not yet parsed a json)
+TEST(SamplerConfigTest, TestDefaultConfig) {
+  SamplerConfig config;
   EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 }
 
