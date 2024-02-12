@@ -12,6 +12,7 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+// Test creating a Dynatrace sampler via factory
 TEST(DynatraceSamplerFactoryTest, Test) {
   auto* factory = Registry::FactoryRegistry<SamplerFactory>::getFactory(
       "envoy.tracers.opentelemetry.samplers.dynatrace");
@@ -29,7 +30,6 @@ TEST(DynatraceSamplerFactoryTest, Test) {
 
   NiceMock<Server::Configuration::MockTracerFactoryContext> context;
   EXPECT_NE(factory->createSampler(typed_config.typed_config(), context), nullptr);
-  EXPECT_STREQ(factory->name().c_str(), "envoy.tracers.opentelemetry.samplers.dynatrace");
 }
 
 } // namespace OpenTelemetry

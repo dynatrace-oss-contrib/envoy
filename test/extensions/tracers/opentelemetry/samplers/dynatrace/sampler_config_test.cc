@@ -11,7 +11,7 @@ namespace Tracers {
 namespace OpenTelemetry {
 
 // Test sampler config json parsing
-TEST(SamplerConfigTest, test) {
+TEST(SamplerConfigTest, TestParsing) {
   // default_root_spans_per_minute not set, ROOT_SPANS_PER_MINUTE_DEFAULT should be used
   SamplerConfig config(0);
   config.parse("{\n \"rootSpansPerMinute\" : 2000 \n }");
@@ -32,12 +32,12 @@ TEST(SamplerConfigTest, test) {
   config.parse(" { ");
   EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 
-  config.parse(" } ");
+  config.parse("{\n \"rootSpansPerMinute\" : 10000 "); // closing } is missing
   EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 }
 
 // Test sampler config default root spans per minute
-TEST(SamplerConfigTest, TestDefaultRootSpansParameter) {
+TEST(SamplerConfigTest, TestDefaultConfig) {
   {
     SamplerConfig config(0);
     EXPECT_EQ(config.getRootSpansPerMinute(), SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);

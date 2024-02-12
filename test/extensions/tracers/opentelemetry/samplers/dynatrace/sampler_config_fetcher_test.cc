@@ -63,18 +63,18 @@ MATCHER_P(MessageMatcher, unusedArg, "") {
          (arg->headers().get(Http::Headers::get().Method)[0]->value().getStringView() == "GET");
 }
 
-// Test a request is sent if timer fires
+// Test that a request is sent if timer fires
 TEST_F(SamplerConfigFetcherTest, TestRequestIsSent) {
   EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
-              send_(MessageMatcher("unused-but-machtes-requires-an-arg"), _, _));
+              send_(MessageMatcher("unused-arg"), _, _));
   SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenval",
                                           SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
 }
 
-// Test receiving a response with code 200 and valid json
-TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
+// Test receiving http response code 200 and valid json
+TEST_F(SamplerConfigFetcherTest, TestResponseOkValidJson) {
   SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
                                           SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
@@ -87,7 +87,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOk) {
   EXPECT_TRUE(timer_->enabled());
 }
 
-// Test receiving a response with code 200 and unexpected json
+// Test receiving http response code 200 and invalid json
 TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
   SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
                                           SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
@@ -102,7 +102,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
   EXPECT_TRUE(timer_->enabled());
 }
 
-// Test receiving a response with code != 200
+// Test receiving http response code != 200
 TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
   SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
                                           SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
@@ -133,7 +133,7 @@ TEST_F(SamplerConfigFetcherTest, TestOnBeforeFinalizeUpstreamSpan) {
   Tracing::MockSpan child_span_;
   SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
                                           SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
-  // onBeforeFinalizeUpstreamSpan() is an empty method, nothing should happen
+  // onBeforeFinalizeUpstreamSpan() is an empty method, nothing to ASSERT, nothing should happen
   config_fetcher.onBeforeFinalizeUpstreamSpan(child_span_, nullptr);
 }
 
@@ -146,7 +146,7 @@ TEST_F(SamplerConfigFetcherTest, TestNoCluster) {
   SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD",
                                           SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
   timer_->invokeCallback();
-  // should not crash or throw.
+  // nothing to assert, should not crash or throw.
 }
 
 } // namespace OpenTelemetry
