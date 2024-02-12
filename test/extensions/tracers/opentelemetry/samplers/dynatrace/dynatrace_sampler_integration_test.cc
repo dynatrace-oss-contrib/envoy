@@ -78,7 +78,7 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithTraceparentAndTracestate) {
                                             .getStringView();
   EXPECT_TRUE(absl::StartsWith(traceparent_value, TRACEPARENT_VALUE_START));
   EXPECT_NE(TRACEPARENT_VALUE, traceparent_value);
-  // Dynatrace tracestate should added to existing tracestate
+  // Dynatrace tracestate should be added to existing tracestate
   absl::string_view tracestate_value = upstream_request_->headers()
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
