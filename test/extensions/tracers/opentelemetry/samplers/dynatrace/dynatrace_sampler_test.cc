@@ -206,7 +206,7 @@ TEST_F(DynatraceSamplerTest, TestWarmup) {
     result.isSampled() ? sampled++ : ignored++;
   }
   // with a perfect random, the number of sampled paths would be lower than threshold (200)
-  // We don't care exceeding the threshold because it is not a hard limit
+  // We don't care about exceeding the threshold because it is not a hard limit
   EXPECT_EQ(ignored, 791);
   EXPECT_EQ(sampled, 208);
 }
