@@ -13,12 +13,12 @@ static constexpr std::chrono::minutes TIMER_INTERVAL{5};
 
 SamplerConfigFetcherImpl::SamplerConfigFetcherImpl(
     Server::Configuration::TracerFactoryContext& context,
-    const envoy::config::core::v3::HttpUri& http_uri, const std::string& token,
-    uint32_t default_root_spans_per_minute)
-    : cluster_manager_(context.serverFactoryContext().clusterManager()), http_uri_(http_uri),
+    const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config)
+    : cluster_manager_(context.serverFactoryContext().clusterManager()),
+      http_uri_(config.http_uri()),
       parsed_authorization_header_to_add_(
-          {Http::LowerCaseString("authorization"), absl::StrCat("Api-Token ", token)}),
-      sampler_config_(default_root_spans_per_minute) {
+          {Http::LowerCaseString("authorization"), absl::StrCat("Api-Token ", config.token())}),
+      sampler_config_(config.root_spans_per_minute()) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     const auto thread_local_cluster = cluster_manager_.getThreadLocalCluster(http_uri_.cluster());

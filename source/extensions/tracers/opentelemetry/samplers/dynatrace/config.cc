@@ -23,8 +23,7 @@ DynatraceSamplerFactory::createSampler(const Protobuf::Message& config,
       const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig&>(
       *mptr, context.messageValidationVisitor());
 
-  SamplerConfigFetcherPtr cf = std::make_unique<SamplerConfigFetcherImpl>(
-      context, proto_config.http_uri(), proto_config.token(), proto_config.root_spans_per_minute());
+  SamplerConfigFetcherPtr cf = std::make_unique<SamplerConfigFetcherImpl>(context, proto_config);
   return std::make_shared<DynatraceSampler>(proto_config, context, std::move(cf));
 }
 
