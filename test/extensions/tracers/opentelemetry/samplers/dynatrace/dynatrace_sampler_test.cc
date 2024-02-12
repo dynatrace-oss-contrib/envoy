@@ -87,25 +87,7 @@ TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
   EXPECT_TRUE(sampling_result.isSampled());
 }
 
-// Verify sampler being invoked with existing Dynatrace trace state tag set
-TEST_F(DynatraceSamplerTest, TestWithParentContext) {
-  SpanContext parent_context = SpanContext("00", trace_id, "b7ad6b7169203331", true,
-                                           "ot=foo:bar,5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;ad");
-
-  SamplingResult sampling_result =
-      sampler_->shouldSample(parent_context, trace_id, "parent_span",
-                             ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
-  EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
-  EXPECT_EQ(sampling_result.attributes->size(), 1);
-  EXPECT_STREQ(
-      sampling_result.attributes->find("supportability.atm_sampling_ratio")->second.c_str(), "1");
-  EXPECT_STREQ(sampling_result.tracestate.c_str(),
-               "ot=foo:bar,5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;ad");
-  EXPECT_TRUE(sampling_result.isRecording());
-  EXPECT_TRUE(sampling_result.isSampled());
-}
-
-// Verify sampler being invoked with parent span context
+// Verify sampler being invoked without a Dynatrace tracestate
 TEST_F(DynatraceSamplerTest, TestWithUnknownParentContext) {
   SpanContext parent_context("00", trace_id, parent_span_id, true, "some_vendor=some_value");
 

@@ -77,9 +77,9 @@ void addSamplingAttributes(uint32_t sampling_exponent,
                            std::map<std::string, std::string>& attributes) {
 
   const auto multiplicity = SamplingState::toMultiplicity(sampling_exponent);
-  // The denominator of the sampling ratio. If for example the Dynatrace OneAgent samples with a
-  // probability the value of supportability.atm_sampling_ratio would be 16
-  // ratio is also called multiplicity
+  // The denominator of the sampling ratio. If, for example, the Dynatrace OneAgent samples with a
+  // probability of 1/16, the value of supportability.atm_sampling_ratio would be 16.
+  // Note: Ratio is also known as multiplicity.
   attributes["supportability.atm_sampling_ratio"] = std::to_string(multiplicity);
 
   if (multiplicity > 1) {
