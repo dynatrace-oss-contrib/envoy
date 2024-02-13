@@ -24,7 +24,7 @@ message DynatraceSamplerConfig {
   string tenant = 1;
 
   // The id of the Dynatrace cluster which the spans are reported to.
-  string cluster_id = 2;
+  int32 cluster_id = 2;
 
   // The HTTP URI to fetch the sampler configuration (root spans per minute). For example:
   //

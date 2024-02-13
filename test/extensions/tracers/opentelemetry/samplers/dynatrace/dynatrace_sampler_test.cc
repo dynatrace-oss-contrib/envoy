@@ -43,7 +43,7 @@ class DynatraceSamplerTest : public testing::Test {
 
   const std::string yaml_string_ = R"EOF(
           tenant: "abc12345"
-          cluster_id: "980df25c"
+          cluster_id: -1743916452
   )EOF";
 
 public:

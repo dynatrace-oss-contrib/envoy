@@ -99,7 +99,7 @@ DynatraceSampler::DynatraceSampler(
     Server::Configuration::TracerFactoryContext& context,
     SamplerConfigFetcherPtr sampler_config_fetcher)
     : dt_tracestate_key_(absl::StrCat(calculateTenantId(config.tenant()), "-",
-                                      absl::string_view(config.cluster_id()), "@dt")),
+                                      absl::Hex(config.cluster_id()), "@dt")),
       sampling_controller_(std::move(sampler_config_fetcher)) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
