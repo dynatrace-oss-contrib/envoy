@@ -4,8 +4,7 @@
 #include <utility>
 #include <vector>
 
-#include "envoy/config/core/v3/http_service.pb.h"
-#include "envoy/config/core/v3/http_uri.pb.h"
+#include "envoy/extensions/tracers/opentelemetry/samplers/v3/dynatrace_sampler.pb.h"
 #include "envoy/http/async_client.h"
 #include "envoy/http/message.h"
 #include "envoy/server/tracer_config.h"
@@ -33,9 +32,10 @@ class SamplerConfigFetcherImpl : public SamplerConfigFetcher,
                                  public Logger::Loggable<Logger::Id::tracing>,
                                  public Http::AsyncClient::Callbacks {
 public:
-  SamplerConfigFetcherImpl(Server::Configuration::TracerFactoryContext& context,
-                           const envoy::config::core::v3::HttpUri& http_uri,
-                           const std::string& token);
+  SamplerConfigFetcherImpl(
+      Server::Configuration::TracerFactoryContext& context,
+      const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig&
+          config);
 
   void onSuccess(const Http::AsyncClient::Request& request,
                  Http::ResponseMessagePtr&& response) override;

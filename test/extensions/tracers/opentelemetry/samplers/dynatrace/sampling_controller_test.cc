@@ -29,6 +29,9 @@ void offerEntry(SamplingController& sc, const std::string& value, int count) {
 
 class TestSamplerConfigFetcher : public SamplerConfigFetcher {
 public:
+  TestSamplerConfigFetcher(
+      uint32_t root_spans_per_minute = SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT)
+      : config(root_spans_per_minute) {}
   const SamplerConfig& getSamplerConfig() const override { return config; }
   SamplerConfig config;
 };
