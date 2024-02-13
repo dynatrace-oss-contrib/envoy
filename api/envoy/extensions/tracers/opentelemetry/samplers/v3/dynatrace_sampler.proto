@@ -40,7 +40,7 @@ message DynatraceSamplerConfig {
   // A valid access token to be authenticated to use the Dynatrace API
   string token = 4;
 
-  // Default number of root spans per minute used if the value can't be requested from the Dynatrace API.
+  // Default number of root spans per minute which is used if the value can't be requested from the Dynatrace API.
   // A default value of 1000 is used if:
   // - no value is specified in the configuration
   // - the value is set to 0
