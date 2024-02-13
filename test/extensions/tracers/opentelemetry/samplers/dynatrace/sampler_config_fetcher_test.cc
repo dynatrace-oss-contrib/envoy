@@ -28,12 +28,19 @@ public:
   SamplerConfigFetcherTest()
       : request_(&tracer_factory_context_.server_factory_context_.cluster_manager_
                       .thread_local_cluster_.async_client_) {
+
     const std::string yaml_string = R"EOF(
-      cluster: "cluster_name"
-      uri: "https://testhost.com/otlp/v1/traces"
-      timeout: 0.250s
+          tenant: "abc12345"
+          cluster_id: "980df25c"
+          token: "tokenval"
+          http_uri:
+            cluster: "cluster_name"
+            uri: "https://testhost.com/otlp/v1/traces"
+            timeout: 0.250s
+          root_spans_per_minute: 1000
+
     )EOF";
-    TestUtility::loadFromYaml(yaml_string, http_uri_);
+    TestUtility::loadFromYaml(yaml_string, proto_config_);
 
     ON_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_,
             getThreadLocalCluster(_))
@@ -47,7 +54,7 @@ public:
 
 protected:
   NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracer_factory_context_;
-  envoy::config::core::v3::HttpUri http_uri_;
+  envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config_;
   NiceMock<Event::MockTimer>* timer_;
   Http::MockAsyncClientRequest request_;
 };
@@ -68,13 +75,13 @@ TEST_F(SamplerConfigFetcherTest, TestRequestIsSent) {
   EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
               send_(MessageMatcher("unused-arg"), _, _));
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenval");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, proto_config_);
   timer_->invokeCallback();
 }
 
 // Test receiving http response code 200 and valid json
 TEST_F(SamplerConfigFetcherTest, TestResponseOkValidJson) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, proto_config_);
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -87,7 +94,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOkValidJson) {
 
 // Test receiving http response code 200 and invalid json
 TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, proto_config_);
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -101,7 +108,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseOkInvalidJson) {
 
 // Test receiving http response code != 200
 TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, proto_config_);
   timer_->invokeCallback();
 
   Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(
@@ -115,7 +122,7 @@ TEST_F(SamplerConfigFetcherTest, TestResponseErrorCode) {
 
 // Test sending failed
 TEST_F(SamplerConfigFetcherTest, TestOnFailure) {
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, proto_config_);
   timer_->invokeCallback();
   config_fetcher.onFailure(request_, Http::AsyncClient::FailureReason::Reset);
   EXPECT_EQ(config_fetcher.getSamplerConfig().getRootSpansPerMinute(),
@@ -126,7 +133,7 @@ TEST_F(SamplerConfigFetcherTest, TestOnFailure) {
 // Test calling onBeforeFinalizeUpstreamSpan
 TEST_F(SamplerConfigFetcherTest, TestOnBeforeFinalizeUpstreamSpan) {
   Tracing::MockSpan child_span_;
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, proto_config_);
   // onBeforeFinalizeUpstreamSpan() is an empty method, nothing to ASSERT, nothing should happen
   config_fetcher.onBeforeFinalizeUpstreamSpan(child_span_, nullptr);
 }
@@ -137,7 +144,7 @@ TEST_F(SamplerConfigFetcherTest, TestNoCluster) {
   ON_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_,
           getThreadLocalCluster(_))
       .WillByDefault(Return(nullptr));
-  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, http_uri_, "tokenXASSD");
+  SamplerConfigFetcherImpl config_fetcher(tracer_factory_context_, proto_config_);
   timer_->invokeCallback();
   // nothing to assert, should not crash or throw.
 }

@@ -63,7 +63,7 @@ public:
 protected:
   NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracer_factory_context_;
   envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config_;
-  SamplerConfig sampler_config_;
+  SamplerConfig sampler_config_{SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT};
   NiceMock<Event::MockTimer>* timer_;
   std::unique_ptr<DynatraceSampler> sampler_;
 };

@@ -13,14 +13,36 @@ option go_package = "github.com/envoyproxy/go-control-plane/envoy/extensions/tra
 option (udpa.annotations.file_status).package_version_status = ACTIVE;
 
 // [#protodoc-title: Dynatrace Sampler config]
+//
+// Configuration for the Dynatrace Sampler extension.
+//
 // [#extension: envoy.tracers.opentelemetry.samplers.dynatrace]
-
+// [#next-free-field: 6]
 message DynatraceSamplerConfig {
+  // The Dynatrace tenant which the spans are reported to.
+  // This is a 8-character string containing characters and digits.
   string tenant = 1;
 
+  // The id of the Dynatrace cluster which the spans are reported to.
   string cluster_id = 2;
 
+  // The HTTP URI to fetch the sampler configuration (root spans per minute). For example:
+  //
+  // .. code-block:: yaml
+  //
+  //    http_uri:
+  //      uri: <tenant>.dev.dynatracelabs.com/api/v2/otlp/v1/traces
+  //      cluster: dynatrace
+  //      timeout: 10s
+  //
   config.core.v3.HttpUri http_uri = 3;
 
+  // A valid access token to be authenticated to use the Dynatrace API
   string token = 4;
+
+  // Default number of root spans per minute which is used if the value can't be requested from the Dynatrace API.
+  // A default value of 1000 is used if:
+  // - no value is specified in the configuration
+  // - the value is set to 0
+  uint32 root_spans_per_minute = 5;
 }
