@@ -290,12 +290,6 @@ TEST(SamplingControllerTest, TestGetSamplingKey) {
   EXPECT_STREQ(key.c_str(), "_anotherpath");
 }
 
-TEST(SamplingControllerTest, Blug) {
-  absl::Hex x(-1743916453);
-  std::string s(absl::StrCat(x));
-  EXPECT_STREQ(s.c_str(), "980df25b");
-}
-
 } // namespace OpenTelemetry
 } // namespace Tracers
 } // namespace Extensions
