@@ -31,7 +31,7 @@ public:
 
     const std::string yaml_string = R"EOF(
           tenant: "abc12345"
-          cluster_id: "980df25c"
+          cluster_id: -1743916452
           token: "tokenval"
           http_uri:
             cluster: "cluster_name"
