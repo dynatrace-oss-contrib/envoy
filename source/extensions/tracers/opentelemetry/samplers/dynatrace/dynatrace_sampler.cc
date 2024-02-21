@@ -9,9 +9,9 @@
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/tenant_id.h"
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 #include "source/extensions/tracers/opentelemetry/span_context.h"
-#include "source/extensions/tracers/opentelemetry/trace_state.h"
 
 #include "absl/strings/str_cat.h"
+#include "opentelemetry/trace/trace_state.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -127,12 +127,12 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
   // add it to stream summary containing the number of requests
   sampling_controller_.offer(sampling_key);
 
-  auto trace_state =
-      TraceState::fromHeader(parent_context.has_value() ? parent_context->tracestate() : "");
+  auto trace_state = opentelemetry::trace::TraceState::FromHeader(
+      parent_context.has_value() ? parent_context->tracestate() : "");
 
   std::string trace_state_value;
 
-  if (trace_state->get(dt_tracestate_key_, trace_state_value)) {
+  if (trace_state->Get(dt_tracestate_key_, trace_state_value)) {
     // we found a DT trace decision in tracestate header
     if (DynatraceTag dynatrace_tag = DynatraceTag::create(trace_state_value);
         dynatrace_tag.isValid()) {
@@ -154,8 +154,8 @@ SamplingResult DynatraceSampler::shouldSample(const absl::optional<SpanContext> 
     // create new forward tag and add it to tracestate
     DynatraceTag new_tag =
         DynatraceTag::create(!sample, sampling_exponent, static_cast<uint8_t>(hash));
-    trace_state = trace_state->set(dt_tracestate_key_, new_tag.asString());
-    result.tracestate = trace_state->toHeader();
+    trace_state = trace_state->Set(dt_tracestate_key_, new_tag.asString());
+    result.tracestate = trace_state->ToHeader();
   }
 
   if (!att.empty()) {
