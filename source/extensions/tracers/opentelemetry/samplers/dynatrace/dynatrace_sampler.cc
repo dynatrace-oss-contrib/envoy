@@ -25,7 +25,7 @@ constexpr std::chrono::minutes SAMPLING_UPDATE_TIMER_DURATION{1};
 /**
  * @brief Helper for creating and reading the Dynatrace tag in the tracestate http header
  * This tag has at least 8 values delimited by semicolon:
- * - tag[0]: version (currently fw4)
+ * - tag[0]: version (currently version 4)
  * - tag[1] - tag[4]: unused in the sampler (always 0)
  * - tag[5]: ignored field. 1 if a span is ignored (not sampled), 0 otherwise
  * - tag[6]: sampling exponent
@@ -91,7 +91,7 @@ void addSamplingAttributes(uint32_t sampling_exponent,
 
   const auto multiplicity = SamplingState::toMultiplicity(sampling_exponent);
   // The denominator of the sampling ratio. If, for example, the Dynatrace OneAgent samples with a
-  // probability of 1/16, the value of supportability.atm_sampling_ratio would be 16.
+  // probability of 1/16, the value of supportability sampling ratio would be 16.
   // Note: Ratio is also known as multiplicity.
   attributes["supportability.atm_sampling_ratio"] = std::to_string(multiplicity);
 
@@ -115,7 +115,7 @@ DynatraceSampler::DynatraceSampler(
                                       absl::Hex(config.cluster_id()), "@dt")),
       sampling_controller_(std::move(sampler_config_fetcher)) {
 
-  // start a timer to periodically update sampling information
+  // start a timer to periodically update sampling information obtained from the Dynatrace API
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     sampling_controller_.update();
     timer_->enableTimer(SAMPLING_UPDATE_TIMER_DURATION);

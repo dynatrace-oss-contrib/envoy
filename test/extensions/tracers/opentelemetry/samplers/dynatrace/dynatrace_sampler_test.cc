@@ -98,14 +98,14 @@ TEST_F(DynatraceSamplerTest, TestWithUnknownParentContext) {
   EXPECT_EQ(sampling_result.attributes->size(), 1);
   EXPECT_STREQ(
       sampling_result.attributes->find("supportability.atm_sampling_ratio")->second.c_str(), "1");
-  // Dynatrace tracesate should be prepended
+  // Dynatrace tracestate should be prepended
   EXPECT_STREQ(sampling_result.tracestate.c_str(),
                "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95,some_vendor=some_value");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
 
-// Verify sampler being invoked with dynatrace trace state
+// Verify sampler being invoked with Dynatrace trace state
 TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextSampled) {
   SpanContext parent_context("00", trace_id, parent_span_id, true, dt_tracestate_sampled);
 
@@ -123,7 +123,7 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextSampled) {
   EXPECT_TRUE(sampling_result.isSampled());
 }
 
-// Verify sampler being invoked with dynatrace trace parent where ignored flag is set
+// Verify sampler being invoked with Dynatrace trace parent where ignored flag is set
 TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextIgnored) {
   SpanContext parent_context("00", trace_id, parent_span_id, true, dt_tracestate_ignored);
 
@@ -143,7 +143,7 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextIgnored) {
   EXPECT_FALSE(sampling_result.isSampled());
 }
 
-// Verify sampler being invoked with dynatrace trace parent from a different tenant
+// Verify sampler being invoked with Dynatrace trace parent from a different tenant
 TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextFromDifferentTenant) {
   SpanContext parent_context("00", trace_id, parent_span_id, true,
                              dt_tracestate_ignored_different_tenant);
@@ -165,7 +165,7 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextFromDifferentTenant) 
   EXPECT_TRUE(sampling_result.isSampled());
 }
 
-// Verify sampler being called during warmup phase (no recent top_k available)
+// Verify sampler being called during warm up phase (no recent top_k available)
 TEST_F(DynatraceSamplerTest, TestWarmup) {
   // config should allow 200 root spans per minute
   sampler_config_.parse("{\n \"rootSpansPerMinute\" : 200 \n }");

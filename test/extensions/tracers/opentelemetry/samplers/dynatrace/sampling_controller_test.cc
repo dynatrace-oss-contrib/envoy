@@ -149,7 +149,7 @@ TEST(SamplingControllerTest, TestWarmup) {
   // offer entries, but don't call update();
   // sampling exponents table will be empty
   // exponent will be calculated based on total count.
-  // same exponent for both exising and non-excisting keys.
+  // same exponent for both existing and non-existing keys.
 
   offerEntry(sc, "GET_0", 10);
   EXPECT_EQ(sc.getSamplingState("GET_0").getExponent(), 0);
@@ -194,7 +194,7 @@ TEST(SamplingControllerTest, TestEmpty) {
   EXPECT_EQ(sc.getSamplingState("GET_something").getMultiplicity(), 1);
 }
 
-// Test getting sampling state for an unknwon key from a non-empty SamplingController
+// Test getting sampling state for an unknown key from a non-empty SamplingController
 TEST(SamplingControllerTest, TestUnknown) {
   auto scf = std::make_unique<TestSamplerConfigFetcher>();
   SamplingController sc(std::move(scf));

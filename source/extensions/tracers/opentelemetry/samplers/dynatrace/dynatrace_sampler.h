@@ -43,7 +43,7 @@ public:
   std::string getDescription() const override;
 
 private:
-  std::string dt_tracestate_key_; // used as key in the http tracesate header
+  std::string dt_tracestate_key_; // used as key in the http tracestate header
   Event::TimerPtr timer_;         // used to periodically calculate sampling multiplicity
   SamplingController sampling_controller_;
 };

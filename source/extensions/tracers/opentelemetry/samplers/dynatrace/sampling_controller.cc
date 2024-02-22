@@ -68,7 +68,7 @@ SamplingState SamplingController::getSamplingState(const std::string& sampling_k
   }
 
   // If we can't find a sampling exponent, we calculate it based on the total number of requests
-  // in this period. This should also handle the "warmup phase" where no top_k is available
+  // in this period. This should also handle the "warm up phase" where no top_k is available
   const auto divisor = sampler_config_fetcher_->getSamplerConfig().getRootSpansPerMinute() / 2;
   if (divisor == 0) {
     return SamplingState{MAX_SAMPLING_EXPONENT};

@@ -83,7 +83,7 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithTraceparentAndTracestate) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  // use StartsWith because pathinfo (last element in trace state) contains a random value
+  // use StartsWith because path-info (last element in trace state) contains a random value
   EXPECT_TRUE(absl::StartsWith(tracestate_value, "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;"))
       << "Received tracestate: " << tracestate_value;
   EXPECT_TRUE(absl::StrContains(tracestate_value, ",key=value"))
@@ -115,7 +115,7 @@ TEST_P(DynatraceSamplerIntegrationTest, TestWithTraceparentOnly) {
                                            .get(Http::LowerCaseString("tracestate"))[0]
                                            ->value()
                                            .getStringView();
-  // use StartsWith because pathinfo (last element in trace state contains a random value)
+  // use StartsWith because path-info (last element in trace state contains a random value)
   EXPECT_TRUE(absl::StartsWith(tracestate_value, "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;"))
       << "Received tracestate: " << tracestate_value;
 }

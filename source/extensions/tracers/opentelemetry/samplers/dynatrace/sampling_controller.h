@@ -15,6 +15,9 @@ namespace OpenTelemetry {
 
 /**
  * @brief Container for sampling exponent / multiplicity.
+ * based on the "Space Saving algorithm", AKA "HeavyHitter"
+ * See:
+ * https://cse.hkust.edu.hk/~raywong/comp5331/References/EfficientComputationOfFrequentAndTop-kElementsInDataStreams.pdf
  *
  */
 class SamplingState {
@@ -35,7 +38,7 @@ public:
   SamplingState() = default;
 
   /**
-   * @brief Does a sampling decision based on random_nr and multiplicity
+   * @brief Does a sampling decision based on random number attribute and multiplicity
    *
    * @param random_nr Random number used for sampling decision.
    * @return true if request should be sampled, false otherwise
@@ -62,7 +65,7 @@ public:
         sampler_config_fetcher_(std::move(sampler_config_fetcher)) {}
 
   /**
-   * @brief Trigger calculating the sampling exponents based on the reuqest count since last update
+   * @brief Trigger calculating the sampling exponents based on the request count since last update
    *
    */
   void update();

@@ -10,8 +10,6 @@
 #include "absl/status/status.h"
 #include "absl/types/optional.h"
 
-// port of https://github.com/fzakaria/space-saving/tree/master
-
 namespace Envoy {
 namespace Extensions {
 namespace Tracers {
@@ -61,6 +59,14 @@ public:
   uint64_t getError() const { return error_; }
 };
 
+/**
+ * @brief Space Saving algorithm implementation also know as "HeavyHitter".
+ * based on the "Space Saving algorithm", AKA "HeavyHitter"
+ * See:
+ * https://cse.hkust.edu.hk/~raywong/comp5331/References/EfficientComputationOfFrequentAndTop-kElementsInDataStreams.pdf
+ * https://github.com/fzakaria/space-saving/tree/master
+ *
+ */
 template <typename T> class StreamSummary {
 private:
   const size_t capacity_;
