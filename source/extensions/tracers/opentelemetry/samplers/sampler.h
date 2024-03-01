@@ -38,11 +38,18 @@ enum class Decision {
  */
 using OTelSpanKind = ::opentelemetry::proto::trace::v1::Span::SpanKind;
 
+/**
+ * @brief Open-telemetry Attribute
+ * see
+ * https://github.com/open-telemetry/opentelemetry-cpp/blob/main/api/include/opentelemetry/common/attribute_value.h
+ */
+using OTelAttribute = ::opentelemetry::common::AttributeValue;
+
 struct SamplingResult {
   /// @see Decision
   Decision decision;
   // A set of span Attributes that will also be added to the Span. Can be nullptr.
-  std::unique_ptr<const std::map<std::string, opentelemetry::common::AttributeValue>> attributes;
+  std::unique_ptr<const std::map<std::string, OTelAttribute>> attributes;
   // A Tracestate that will be associated with the Span. If the sampler
   // returns an empty Tracestate here, the Tracestate will be cleared, so samplers SHOULD normally
   // return the passed-in Tracestate if they do not intend to change it

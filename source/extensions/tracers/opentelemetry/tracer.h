@@ -145,7 +145,12 @@ public:
   void setTracestate(const absl::string_view& tracestate) {
     span_.set_trace_state(std::string{tracestate});
   }
-  void setAttribute(absl::string_view name, const opentelemetry::common::AttributeValue& value);
+
+  /**
+   * Sets a span attribute.
+   */
+  void setAttribute(absl::string_view name, const OTelAttribute& value);
+
   /**
    * Method to access the span for testing.
    */

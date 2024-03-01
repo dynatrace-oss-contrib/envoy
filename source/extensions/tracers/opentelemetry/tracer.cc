@@ -47,14 +47,13 @@ void callSampler(SamplerSharedPtr sampler, const absl::optional<SpanContext> spa
       new_span.setAttribute(attribute.first, attribute.second);
     }
   }
-
   if (!sampling_result.tracestate.empty()) {
     new_span.setTracestate(sampling_result.tracestate);
   }
 }
 
 void setProtoValue(opentelemetry::proto::common::v1::AnyValue& value_proto,
-                   const opentelemetry::common::AttributeValue& attribute_value) {
+                   const OTelAttribute& attribute_value) {
   switch (attribute_value.index()) {
   case opentelemetry::common::AttributeType::kTypeBool:
     value_proto.set_bool_value(opentelemetry::nostd::get<bool>(attribute_value) ? true : false);
@@ -131,8 +130,7 @@ void Span::injectContext(Tracing::TraceContext& trace_context,
   traceStateHeader().setRefKey(trace_context, span_.trace_state());
 }
 
-void Span::setAttribute(absl::string_view name,
-                        const opentelemetry::common::AttributeValue& attribute_value) {
+void Span::setAttribute(absl::string_view name, const OTelAttribute& attribute_value) {
   // The attribute key MUST be a non-null and non-empty string.
   if (name.empty()) {
     return;

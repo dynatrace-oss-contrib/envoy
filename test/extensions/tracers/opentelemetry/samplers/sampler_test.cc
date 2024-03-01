@@ -165,7 +165,7 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
                    const std::vector<SpanContext>&) {
         SamplingResult res;
         res.decision = Decision::Drop;
-        std::map<std::string, opentelemetry::common::AttributeValue> attributes;
+        std::map<std::string, OTelAttribute> attributes;
         attributes["char_key"] = "char_value";
         attributes["sv_key"] = absl::string_view("sv_value");
         attributes["bool_key"] = true;
@@ -177,8 +177,7 @@ TEST_F(SamplerFactoryTest, TestWithSampler) {
         attributes["not_supported_span"] = opentelemetry::nostd::span<bool>();
 
         res.attributes =
-            std::make_unique<const std::map<std::string, opentelemetry::common::AttributeValue>>(
-                std::move(attributes));
+            std::make_unique<const std::map<std::string, OTelAttribute>>(std::move(attributes));
         res.tracestate = "this_is=another_tracesate";
         return res;
       });
