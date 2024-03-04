@@ -8,6 +8,7 @@
 #include "source/common/common/empty_string.h"
 #include "source/common/common/hex.h"
 #include "source/common/tracing/trace_context_impl.h"
+#include "source/extensions/tracers/opentelemetry/otlp_utils.h"
 
 #include "opentelemetry/proto/collector/trace/v1/trace_service.pb.h"
 #include "opentelemetry/proto/trace/v1/trace.pb.h"
@@ -49,40 +50,6 @@ void callSampler(SamplerSharedPtr sampler, const absl::optional<SpanContext> spa
   }
   if (!sampling_result.tracestate.empty()) {
     new_span.setTracestate(sampling_result.tracestate);
-  }
-}
-
-void setProtoValue(opentelemetry::proto::common::v1::AnyValue& value_proto,
-                   const OTelAttribute& attribute_value) {
-  switch (attribute_value.index()) {
-  case opentelemetry::common::AttributeType::kTypeBool:
-    value_proto.set_bool_value(opentelemetry::nostd::get<bool>(attribute_value) ? true : false);
-    break;
-  case opentelemetry::common::AttributeType::kTypeInt:
-    value_proto.set_int_value(opentelemetry::nostd::get<int32_t>(attribute_value));
-    break;
-  case opentelemetry::common::AttributeType::kTypeInt64:
-    value_proto.set_int_value(opentelemetry::nostd::get<int64_t>(attribute_value));
-    break;
-  case opentelemetry::common::AttributeType::kTypeUInt:
-    value_proto.set_int_value(opentelemetry::nostd::get<uint32_t>(attribute_value));
-    break;
-  case opentelemetry::common::AttributeType::kTypeUInt64:
-    value_proto.set_int_value(opentelemetry::nostd::get<uint64_t>(attribute_value));
-    break;
-  case opentelemetry::common::AttributeType::kTypeDouble:
-    value_proto.set_double_value(opentelemetry::nostd::get<double>(attribute_value));
-    break;
-  case opentelemetry::common::AttributeType::kTypeCString:
-    value_proto.set_string_value(opentelemetry::nostd::get<const char*>(attribute_value));
-    break;
-  case opentelemetry::common::AttributeType::kTypeString: {
-    value_proto.set_string_value(
-        opentelemetry::nostd::get<opentelemetry::nostd::string_view>(attribute_value).data(),
-        opentelemetry::nostd::get<opentelemetry::nostd::string_view>(attribute_value).size());
-  } break;
-  default:
-    return;
   }
 }
 
@@ -139,7 +106,7 @@ void Span::setAttribute(absl::string_view name, const OTelAttribute& attribute_v
   // If a value already exists for this key, overwrite it.
   for (auto& key_value : *span_.mutable_attributes()) {
     if (key_value.key() == name) {
-      setProtoValue(*key_value.mutable_value(), attribute_value);
+      OtlpUtils::populateAnyValue(*key_value.mutable_value(), attribute_value);
       return;
     }
   }
@@ -148,7 +115,7 @@ void Span::setAttribute(absl::string_view name, const OTelAttribute& attribute_v
       opentelemetry::proto::common::v1::KeyValue();
   opentelemetry::proto::common::v1::AnyValue value_proto =
       opentelemetry::proto::common::v1::AnyValue();
-  setProtoValue(value_proto, attribute_value);
+  OtlpUtils::populateAnyValue(value_proto, attribute_value);
   key_value.set_key(std::string{name});
   *key_value.mutable_value() = value_proto;
   *span_.add_attributes() = key_value;
