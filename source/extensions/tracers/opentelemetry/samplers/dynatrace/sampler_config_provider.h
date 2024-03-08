@@ -53,6 +53,7 @@ public:
 
   void onFailure(const Http::AsyncClient::Request& request,
                  Http::AsyncClient::FailureReason reason) override;
+  
   void onBeforeFinalizeUpstreamSpan(Envoy::Tracing::Span& /*span*/,
                                     const Http::ResponseHeaderMap* /*response_headers*/) override{};
 
