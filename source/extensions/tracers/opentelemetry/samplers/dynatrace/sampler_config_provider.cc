@@ -62,7 +62,7 @@ void SamplerConfigProviderImpl::onSuccess(const Http::AsyncClient::Request& /*re
 void SamplerConfigProviderImpl::onFailure(const Http::AsyncClient::Request& /*request*/,
                                           Http::AsyncClient::FailureReason reason) {
   onRequestDone();
-  ENVOY_LOG(info, "The OTLP export request failed. Reason {}", enumToInt(reason));
+  ENVOY_LOG(warn, "Failed to get sampling configuration from Dynatrace. Reason {}", enumToInt(reason));
 }
 
 const SamplerConfig& SamplerConfigProviderImpl::getSamplerConfig() const { return sampler_config_; }
