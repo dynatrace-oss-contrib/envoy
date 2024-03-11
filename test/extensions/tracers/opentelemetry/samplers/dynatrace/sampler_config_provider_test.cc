@@ -123,6 +123,43 @@ TEST_F(SamplerConfigProviderTest, TestResponseOkInvalidJson) {
   EXPECT_TRUE(timer_->enabled());
 }
 
+void doTestResponseCode(Http::Code response_code, bool timer_enabled,
+                        SamplerConfigProviderImpl& config_provider,
+                        Http::MockAsyncClientRequest& request, NiceMock<Event::MockTimer>* timer,
+                        int line_num) {
+  SCOPED_TRACE(absl::StrCat(__FUNCTION__, " called from line ", line_num));
+  Http::ResponseMessagePtr message(new Http::ResponseMessageImpl(Http::ResponseHeaderMapPtr{
+      new Http::TestResponseHeaderMapImpl{{":status", std::to_string(enumToInt(response_code))}}}));
+  message->body().add("{\n \"rootSpansPerMinute\" : 1000 \n }");
+  config_provider.onSuccess(request, std::move(message));
+  EXPECT_EQ(timer->enabled(), timer_enabled);
+}
+
+// Test that timer is re-enabled depending on the response code
+TEST_F(SamplerConfigProviderTest, TestReenableTimer) {
+  SamplerConfigProviderImpl config_provider(tracer_factory_context_, proto_config_);
+  timer_->invokeCallback();
+  doTestResponseCode(Http::Code::Forbidden, false, config_provider, request_, timer_, __LINE__);
+  doTestResponseCode(Http::Code::NotFound, false, config_provider, request_, timer_, __LINE__);
+  doTestResponseCode(Http::Code::OK, true, config_provider, request_, timer_, __LINE__);
+  timer_->invokeCallback();
+  doTestResponseCode(Http::Code::TooManyRequests, true, config_provider, request_, timer_,
+                     __LINE__);
+  timer_->invokeCallback();
+  doTestResponseCode(Http::Code::InternalServerError, true, config_provider, request_, timer_,
+                     __LINE__);
+  timer_->invokeCallback();
+  doTestResponseCode(Http::Code::BadGateway, true, config_provider, request_, timer_, __LINE__);
+  timer_->invokeCallback();
+  doTestResponseCode(Http::Code::ServiceUnavailable, true, config_provider, request_, timer_,
+                     __LINE__);
+  timer_->invokeCallback();
+  doTestResponseCode(Http::Code::GatewayTimeout, true, config_provider, request_, timer_, __LINE__);
+  timer_->invokeCallback();
+  doTestResponseCode(Http::Code::InsufficientStorage, true, config_provider, request_, timer_,
+                     __LINE__);
+}
+
 // Test receiving http response code != 200
 TEST_F(SamplerConfigProviderTest, TestResponseErrorCode) {
   SamplerConfigProviderImpl config_provider(tracer_factory_context_, proto_config_);
@@ -134,7 +171,7 @@ TEST_F(SamplerConfigProviderTest, TestResponseErrorCode) {
   config_provider.onSuccess(request_, std::move(message));
   EXPECT_EQ(config_provider.getSamplerConfig().getRootSpansPerMinute(),
             SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
-  EXPECT_TRUE(timer_->enabled());
+  EXPECT_FALSE(timer_->enabled());
 }
 
 // Test sending failed
@@ -195,7 +232,7 @@ TEST_F(SamplerConfigProviderTest, TestNoValueConfigured) {
           http_uri:
             cluster: "cluster_name"
             uri: "https://testhost.com/otlp/v1/traces"
-            timeout: 0.250s
+            timeout: 500s
     )EOF";
 
   envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config;

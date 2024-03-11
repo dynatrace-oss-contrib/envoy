@@ -30,8 +30,10 @@ public:
    * @brief Parses a json string containing the expected root spans per minute.
    *
    * @param json A string containing the configuration.
+   *
+   * @return true if parsing was successful, false otherwise
    */
-  void parse(const std::string& json);
+  bool parse(const std::string& json);
 
   /**
    * @brief Returns wanted root spans per minute

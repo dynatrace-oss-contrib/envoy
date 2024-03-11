@@ -13,13 +13,42 @@ namespace OpenTelemetry {
 static constexpr std::chrono::seconds INITIAL_TIMER_DURATION{10};
 static constexpr std::chrono::minutes TIMER_INTERVAL{5};
 
+namespace {
+
+bool reEnableTimer(Http::Code response_code) {
+  switch (response_code) {
+  case Http::Code::OK:
+  case Http::Code::TooManyRequests:
+  case Http::Code::InternalServerError:
+  case Http::Code::BadGateway:
+  case Http::Code::ServiceUnavailable:
+  case Http::Code::GatewayTimeout:
+  case Http::Code::InsufficientStorage:
+    return true;
+  default:
+    return false;
+  }
+}
+
+std::chrono::milliseconds getTimeout(envoy::config::core::v3::HttpUri& http_uri) {
+  auto timeout =
+      std::chrono::milliseconds(DurationUtil::durationToMilliseconds(http_uri.timeout()));
+  // we want to ensure that we don't have more than one pending request
+  if (timeout > (TIMER_INTERVAL / 2)) {
+    timeout = (TIMER_INTERVAL / 2);
+  }
+  return timeout;
+}
+
+} // namespace
+
 SamplerConfigProviderImpl::SamplerConfigProviderImpl(
     Server::Configuration::TracerFactoryContext& context,
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config)
     : cluster_manager_(context.serverFactoryContext().clusterManager()),
       http_uri_(config.http_uri()),
       authorization_header_value_(absl::StrCat("Api-Token ", config.token())),
-      sampler_config_(config.root_spans_per_minute()) {
+      sampler_config_(config.root_spans_per_minute()), timeout_(getTimeout(http_uri_)) {
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     const auto thread_local_cluster = cluster_manager_.getThreadLocalCluster(http_uri_.cluster());
@@ -32,8 +61,7 @@ SamplerConfigProviderImpl::SamplerConfigProviderImpl(
       message->headers().setReference(Http::CustomHeaders::get().Authorization,
                                       authorization_header_value_);
       active_request_ = thread_local_cluster->httpAsyncClient().send(
-          std::move(message), *this,
-          Http::AsyncClient::RequestOptions().setTimeout(std::chrono::milliseconds(6000)));
+          std::move(message), *this, Http::AsyncClient::RequestOptions().setTimeout(timeout_));
     }
   });
 
@@ -48,29 +76,35 @@ SamplerConfigProviderImpl::~SamplerConfigProviderImpl() {
 
 void SamplerConfigProviderImpl::onSuccess(const Http::AsyncClient::Request& /*request*/,
                                           Http::ResponseMessagePtr&& http_response) {
-  onRequestDone();
+  active_request_ = nullptr;
   const auto response_code = Http::Utility::getResponseStatus(http_response->headers());
+  bool json_valid = false;
   if (response_code == enumToInt(Http::Code::OK)) {
     ENVOY_LOG(debug, "Received sampling configuration from Dynatrace: {}",
               http_response->bodyAsString());
-    sampler_config_.parse(http_response->bodyAsString());
+    json_valid = sampler_config_.parse(http_response->bodyAsString());
+    if (!json_valid) {
+      ENVOY_LOG(warn, "Failed to parse sampling configuration received from Dynatrace: {}",
+                http_response->bodyAsString());
+    }
   } else {
     ENVOY_LOG(warn, "Failed to get sampling configuration from Dynatrace: {}", response_code);
+  }
+
+  if (json_valid || reEnableTimer(static_cast<Http::Code>(response_code))) {
+    timer_->enableTimer(std::chrono::seconds(TIMER_INTERVAL));
   }
 }
 
 void SamplerConfigProviderImpl::onFailure(const Http::AsyncClient::Request& /*request*/,
                                           Http::AsyncClient::FailureReason reason) {
-  onRequestDone();
-  ENVOY_LOG(warn, "Failed to get sampling configuration from Dynatrace. Reason {}", enumToInt(reason));
+  active_request_ = nullptr;
+  timer_->enableTimer(std::chrono::seconds(TIMER_INTERVAL));
+  ENVOY_LOG(warn, "Failed to get sampling configuration from Dynatrace. Reason {}",
+            enumToInt(reason));
 }
 
 const SamplerConfig& SamplerConfigProviderImpl::getSamplerConfig() const { return sampler_config_; }
-
-void SamplerConfigProviderImpl::onRequestDone() {
-  active_request_ = nullptr;
-  timer_->enableTimer(std::chrono::seconds(TIMER_INTERVAL));
-}
 
 } // namespace OpenTelemetry
 } // namespace Tracers

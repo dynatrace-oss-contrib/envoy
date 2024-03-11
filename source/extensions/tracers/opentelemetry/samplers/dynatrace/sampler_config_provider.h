@@ -53,7 +53,7 @@ public:
 
   void onFailure(const Http::AsyncClient::Request& request,
                  Http::AsyncClient::FailureReason reason) override;
-  
+
   void onBeforeFinalizeUpstreamSpan(Envoy::Tracing::Span& /*span*/,
                                     const Http::ResponseHeaderMap* /*response_headers*/) override{};
 
@@ -68,8 +68,7 @@ private:
   const std::string authorization_header_value_;
   Http::AsyncClient::Request* active_request_{};
   SamplerConfig sampler_config_;
-
-  void onRequestDone();
+  const std::chrono::milliseconds timeout_;
 };
 
 using SamplerConfigProviderPtr = std::unique_ptr<SamplerConfigProvider>;
