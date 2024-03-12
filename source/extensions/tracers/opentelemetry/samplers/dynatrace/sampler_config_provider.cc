@@ -23,7 +23,6 @@ bool reEnableTimer(Http::Code response_code) {
   case Http::Code::BadGateway:
   case Http::Code::ServiceUnavailable:
   case Http::Code::GatewayTimeout:
-  case Http::Code::InsufficientStorage:
     return true;
   default:
     return false;
