@@ -26,7 +26,7 @@ message DynatraceSamplerConfig {
   // The value can be obtained from the Envoy deployment page in Dynatrace.
   int32 cluster_id = 2;
 
-  // The HTTP service to fetch the sampler configuration (root spans per minute). For example:
+  // The HTTP service to fetch the sampler configuration from the Dynatrace API (root spans per minute). For example:
   //
   // .. code-block:: yaml
   //    http_service:
