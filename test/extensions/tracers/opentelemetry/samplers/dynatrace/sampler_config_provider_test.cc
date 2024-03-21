@@ -62,7 +62,6 @@ protected:
 };
 
 MATCHER_P(MessageMatcher, unusedArg, "") {
-  // prefix 'Api-Token' should be added to 'tokenval' set via SamplerConfigProvider constructor
   return (arg->headers()
               .get(Http::CustomHeaders::get().Authorization)[0]
               ->value()
