@@ -31,7 +31,7 @@ namespace {
 
 SamplerSharedPtr
 tryCreateSamper(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetry_config,
-                Server::Configuration::TracerFactoryContext& context) {
+                Server::Configuration::TracerFactoryContext& context, spdlog::logger& logger) {
   SamplerSharedPtr sampler;
   if (opentelemetry_config.has_sampler()) {
     auto& sampler_config = opentelemetry_config.sampler();
@@ -39,7 +39,12 @@ tryCreateSamper(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemet
     if (!factory) {
       throw EnvoyException(fmt::format("Sampler factory not found: '{}'", sampler_config.name()));
     }
-    sampler = factory->createSampler(sampler_config.typed_config(), context);
+    TRY_ASSERT_MAIN_THREAD {
+      sampler = factory->createSampler(sampler_config.typed_config(), context);
+    }
+    END_TRY CATCH(const EnvoyException& ee, {
+      ENVOY_LOG_TO_LOGGER(logger, error, "Failed to create sampler: {}", ee.what());
+    });
   }
   return sampler;
 }
@@ -82,7 +87,7 @@ Driver::Driver(const envoy::config::trace::v3::OpenTelemetryConfig& opentelemetr
   }
 
   // Create the sampler if configured
-  SamplerSharedPtr sampler = tryCreateSamper(opentelemetry_config, context);
+  SamplerSharedPtr sampler = tryCreateSamper(opentelemetry_config, context, ENVOY_LOGGER());
 
   // Create the tracer in Thread Local Storage.
   tls_slot_ptr_->set([opentelemetry_config, &factory_context, this, resource_ptr,

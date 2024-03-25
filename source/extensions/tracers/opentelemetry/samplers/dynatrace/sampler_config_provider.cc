@@ -33,17 +33,18 @@ bool reEnableTimer(Http::Code response_code) {
 
 void SamplerConfigProviderImpl::handleConfig(
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config) {
-
-  // check error conditions:
-  if (config.has_http_service() && config.has_http_uri()) {
-    ENVOY_LOG(
-        error,
-        "Dynatrace Sampler: `http_service` and `http_uri` are set. `http_uri` will be ignored");
-  }
-
-  if (config.has_http_service() && !config.token().empty()) {
-    ENVOY_LOG(error,
-              "Dynatrace Sampler: `http_service` and `token` are set. `token` will be ignored");
+  // check possible errors
+  if (config.has_http_service()) {
+    if (config.has_http_uri()) {
+      throw EnvoyException("Dynatrace Sampler: `http_service` and `http_uri` are set.");
+    }
+    if (!config.token().empty()) {
+      throw EnvoyException("Dynatrace Sampler: `http_service` and `token` are set.");
+    }
+  } else { // no http_service
+    if (!config.has_http_uri() || config.token().empty()) {
+      throw EnvoyException("Dynatrace Sampler: `http_service` not set.");
+    }
   }
 
   // handle config

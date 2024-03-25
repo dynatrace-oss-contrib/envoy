@@ -25,6 +25,15 @@ TEST(DynatraceSamplerFactoryTest, Test) {
     name: envoy.tracers.opentelemetry.samplers.dynatrace
     typed_config:
         "@type": type.googleapis.com/envoy.extensions.tracers.opentelemetry.samplers.v3.DynatraceSamplerConfig
+        http_service:
+          http_uri:
+            cluster: "cluster_name"
+            uri: "https://testhost.com/api/v2/samplingConfiguration"
+            timeout: 10s
+          request_headers_to_add:
+          - header:
+              key: "authorization"
+              value: "Api-Token tokenval"
   )EOF";
   TestUtility::loadFromYaml(sampler_yaml, typed_config);
 

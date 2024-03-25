@@ -274,32 +274,46 @@ TEST_F(SamplerConfigProviderTest, TestValueZeroConfigured) {
 }
 
 // Test http_service and http_uri and token are set
-TEST_F(SamplerConfigProviderTest, TestConfigHandlingAllAreSet) {
+TEST(SamplerConfigProviderTestNoParent, TestConfigHandlingServiceAndUriSet) {
   const std::string yaml_string = R"EOF(
           http_service:
             http_uri:
               cluster: "cluster_name"
               uri: "https://testhost.com/api/v2/samplingConfiguration"
+              timeout: 10s
             request_headers_to_add:
             - header:
                 key: "authorization"
                 value: "Api-Token tokenval"
-          token: "shouldn't_be_used"
           http_uri:
               cluster: "cluster_name"
               uri: "https://unused.com/notused"
     )EOF";
 
   envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config;
+  NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracer_factory_context;
   TestUtility::loadFromYaml(yaml_string, proto_config);
+  EXPECT_THROW(SamplerConfigProviderImpl(tracer_factory_context, proto_config), EnvoyException);
+}
 
-  ExpectedHeaders expected_headers{"Api-Token tokenval", "/api/v2/samplingConfiguration",
-                                   "testhost.com"};
-  EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
-                  .async_client_,
-              send_(MessageMatcher(expected_headers), _, _));
-  SamplerConfigProviderImpl config_provider(tracer_factory_context_, proto_config);
-  timer_->invokeCallback();
+TEST(SamplerConfigProviderTestNoParent, TestConfigHandlingServiceAndTokenSet) {
+  const std::string yaml_string = R"EOF(
+          http_service:
+            http_uri:
+              cluster: "cluster_name"
+              uri: "https://testhost.com/api/v2/samplingConfiguration"
+              timeout: 10s
+            request_headers_to_add:
+            - header:
+                key: "authorization"
+                value: "Api-Token tokenval"
+          token: "shouldn't_be_used"
+    )EOF";
+
+  envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config;
+  NiceMock<Envoy::Server::Configuration::MockTracerFactoryContext> tracer_factory_context;
+  TestUtility::loadFromYaml(yaml_string, proto_config);
+  EXPECT_THROW(SamplerConfigProviderImpl(tracer_factory_context, proto_config), EnvoyException);
 }
 
 // Test if http_service is not set but http_uri and token are set
@@ -309,6 +323,7 @@ TEST_F(SamplerConfigProviderTest, TestConfigHandlingDeprecatedAreSet) {
           http_uri:
               cluster: "cluster_name"
               uri: "https://testhost.com/api/v2/samplingConfiguration"
+              timeout: 10s
     )EOF";
 
   envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config;

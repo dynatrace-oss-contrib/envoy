@@ -39,6 +39,15 @@ public:
           "@type": type.googleapis.com/envoy.extensions.tracers.opentelemetry.samplers.v3.DynatraceSamplerConfig
           tenant: "abc12345"
           cluster_id: -1743916452
+          http_service:
+            http_uri:
+              cluster: "cluster_name"
+              uri: "https://testhost.com/api/v2/samplingConfiguration"
+              timeout: 10s
+            request_headers_to_add:
+            - header:
+                key: "authorization"
+                value: "Api-Token tokenval"
   )EOF";
 
     auto tracing_config =
