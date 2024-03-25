@@ -20,7 +20,6 @@ namespace Tracers {
 namespace OpenTelemetry {
 using testing::NiceMock;
 using testing::Return;
-using testing::ReturnRef;
 
 class SamplerConfigProviderTest : public testing::Test {
 public:
@@ -273,7 +272,7 @@ TEST_F(SamplerConfigProviderTest, TestValueZeroConfigured) {
             SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
 }
 
-// Test http_service and http_uri and token are set
+// Test handling if http_service and http_uri are set
 TEST(SamplerConfigProviderTestNoParent, TestConfigHandlingServiceAndUriSet) {
   const std::string yaml_string = R"EOF(
           http_service:
@@ -296,6 +295,7 @@ TEST(SamplerConfigProviderTestNoParent, TestConfigHandlingServiceAndUriSet) {
   EXPECT_THROW(SamplerConfigProviderImpl(tracer_factory_context, proto_config), EnvoyException);
 }
 
+// Test handling if http_service and token are set
 TEST(SamplerConfigProviderTestNoParent, TestConfigHandlingServiceAndTokenSet) {
   const std::string yaml_string = R"EOF(
           http_service:
@@ -316,7 +316,7 @@ TEST(SamplerConfigProviderTestNoParent, TestConfigHandlingServiceAndTokenSet) {
   EXPECT_THROW(SamplerConfigProviderImpl(tracer_factory_context, proto_config), EnvoyException);
 }
 
-// Test if http_service is not set but http_uri and token are set
+// Test handling if http_service is not set but http_uri and token are set
 TEST_F(SamplerConfigProviderTest, TestConfigHandlingDeprecatedAreSet) {
   const std::string yaml_string = R"EOF(
           token: "tokenval"
