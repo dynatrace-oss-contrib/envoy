@@ -31,16 +31,42 @@ bool reEnableTimer(Http::Code response_code) {
 
 } // namespace
 
+void SamplerConfigProviderImpl::handleConfig(
+    const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config) {
+
+  // check error conditions:
+  if (config.has_http_service() && config.has_http_uri()) {
+    ENVOY_LOG(
+        error,
+        "Dynatrace Sampler: `http_service` and `http_uri` are set. `http_uri` will be ignored");
+  }
+
+  if (config.has_http_service() && !config.token().empty()) {
+    ENVOY_LOG(error,
+              "Dynatrace Sampler: `http_service` and `token` are set. `token` will be ignored");
+  }
+
+  // handle config
+  if (config.has_http_service()) {
+    for (const auto& header_value_option : config.http_service().request_headers_to_add()) {
+      parsed_headers_to_add_.push_back({Http::LowerCaseString(header_value_option.header().key()),
+                                        header_value_option.header().value()});
+    }
+    http_uri_ = config.http_service().http_uri();
+  } else {
+    parsed_headers_to_add_.push_back(
+        {Http::CustomHeaders::get().Authorization, absl::StrCat("Api-Token ", config.token())});
+    http_uri_ = config.http_uri();
+  }
+}
+
 SamplerConfigProviderImpl::SamplerConfigProviderImpl(
     Server::Configuration::TracerFactoryContext& context,
     const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig& config)
     : cluster_manager_(context.serverFactoryContext().clusterManager()),
-      http_uri_(config.http_service().http_uri()), sampler_config_(config.root_spans_per_minute()) {
+      sampler_config_(config.root_spans_per_minute()) {
 
-  for (const auto& header_value_option : config.http_service().request_headers_to_add()) {
-    parsed_headers_to_add_.push_back({Http::LowerCaseString(header_value_option.header().key()),
-                                      header_value_option.header().value()});
-  }
+  handleConfig(config);
 
   timer_ = context.serverFactoryContext().mainThreadDispatcher().createTimer([this]() -> void {
     const auto thread_local_cluster = cluster_manager_.getThreadLocalCluster(http_uri_.cluster());

@@ -61,23 +61,31 @@ protected:
   Http::MockAsyncClientRequest request_;
 };
 
-MATCHER_P(MessageMatcher, unusedArg, "") {
+struct ExpectedHeaders {
+  std::string auth_header;
+  std::string path;
+  std::string host;
+};
+
+MATCHER_P(MessageMatcher, expected_headers, "") {
   return (arg->headers()
               .get(Http::CustomHeaders::get().Authorization)[0]
               ->value()
-              .getStringView() == "Api-Token tokenval") &&
+              .getStringView() == expected_headers.auth_header) &&
          (arg->headers().get(Http::Headers::get().Path)[0]->value().getStringView() ==
-          "/api/v2/samplingConfiguration") &&
+          expected_headers.path) &&
          (arg->headers().get(Http::Headers::get().Host)[0]->value().getStringView() ==
-          "testhost.com") &&
+          expected_headers.host) &&
          (arg->headers().get(Http::Headers::get().Method)[0]->value().getStringView() == "GET");
 }
 
 // Test that a request is sent if timer fires
 TEST_F(SamplerConfigProviderTest, TestRequestIsSent) {
+  ExpectedHeaders expected_headers{"Api-Token tokenval", "/api/v2/samplingConfiguration",
+                                   "testhost.com"};
   EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
                   .async_client_,
-              send_(MessageMatcher("unused-arg"), _, _));
+              send_(MessageMatcher(expected_headers), _, _));
   SamplerConfigProviderImpl config_provider(tracer_factory_context_, proto_config_);
   timer_->invokeCallback();
 }
@@ -263,6 +271,56 @@ TEST_F(SamplerConfigProviderTest, TestValueZeroConfigured) {
   SamplerConfigProviderImpl config_provider(tracer_factory_context_, proto_config);
   EXPECT_EQ(config_provider.getSamplerConfig().getRootSpansPerMinute(),
             SamplerConfig::ROOT_SPANS_PER_MINUTE_DEFAULT);
+}
+
+// Test http_service and http_uri and token are set
+TEST_F(SamplerConfigProviderTest, TestConfigHandlingAllAreSet) {
+  const std::string yaml_string = R"EOF(
+          http_service:
+            http_uri:
+              cluster: "cluster_name"
+              uri: "https://testhost.com/api/v2/samplingConfiguration"
+            request_headers_to_add:
+            - header:
+                key: "authorization"
+                value: "Api-Token tokenval"
+          token: "shouldn't_be_used"
+          http_uri:
+              cluster: "cluster_name"
+              uri: "https://unused.com/notused"
+    )EOF";
+
+  envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config;
+  TestUtility::loadFromYaml(yaml_string, proto_config);
+
+  ExpectedHeaders expected_headers{"Api-Token tokenval", "/api/v2/samplingConfiguration",
+                                   "testhost.com"};
+  EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
+                  .async_client_,
+              send_(MessageMatcher(expected_headers), _, _));
+  SamplerConfigProviderImpl config_provider(tracer_factory_context_, proto_config);
+  timer_->invokeCallback();
+}
+
+// Test if http_service is not set but http_uri and token are set
+TEST_F(SamplerConfigProviderTest, TestConfigHandlingDeprecatedAreSet) {
+  const std::string yaml_string = R"EOF(
+          token: "tokenval"
+          http_uri:
+              cluster: "cluster_name"
+              uri: "https://testhost.com/api/v2/samplingConfiguration"
+    )EOF";
+
+  envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig proto_config;
+  TestUtility::loadFromYaml(yaml_string, proto_config);
+
+  ExpectedHeaders expected_headers{"Api-Token tokenval", "/api/v2/samplingConfiguration",
+                                   "testhost.com"};
+  EXPECT_CALL(tracer_factory_context_.server_factory_context_.cluster_manager_.thread_local_cluster_
+                  .async_client_,
+              send_(MessageMatcher(expected_headers), _, _));
+  SamplerConfigProviderImpl config_provider(tracer_factory_context_, proto_config);
+  timer_->invokeCallback();
 }
 
 } // namespace OpenTelemetry

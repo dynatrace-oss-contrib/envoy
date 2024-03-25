@@ -70,6 +70,10 @@ private:
   std::vector<std::pair<const Http::LowerCaseString, const std::string>> parsed_headers_to_add_;
   Http::AsyncClient::Request* active_request_{};
   SamplerConfig sampler_config_;
+
+  void handleConfig(
+      const envoy::extensions::tracers::opentelemetry::samplers::v3::DynatraceSamplerConfig&
+          config);
 };
 
 using SamplerConfigProviderPtr = std::unique_ptr<SamplerConfigProvider>;
