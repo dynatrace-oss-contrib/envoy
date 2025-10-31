@@ -10,8 +10,6 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
-namespace {
-
 /**
  * @brief Helper for creating and reading the Dynatrace tag in the tracestate http header
  * This tag has at least 8 values delimited by semicolon:
@@ -30,7 +28,7 @@ public:
     return {true, ignored, sampling_exponent, path_info};
   }
 
-  // Creates a DynatraceTag from the fw4 value in the trace state
+  // Creates a DynatraceTag from the fw4 value in the tracestate
   static DynatraceTag create(const std::string& value) {
     std::vector<absl::string_view> tracestate_components =
         absl::StrSplit(value, ';', absl::AllowEmpty());
@@ -78,7 +76,6 @@ private:
   uint32_t path_info_;
 };
 
-} // namespace
 } // namespace OpenTelemetry
 } // namespace Tracers
 } // namespace Extensions
