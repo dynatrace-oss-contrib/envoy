@@ -59,7 +59,7 @@ public:
   // Returns true if parsing was successful.
   bool isValid() const { return valid_; };
 
-  // Returns the value of the ignored flag.
+  // Returns true if the ignored flag is set.
   bool isIgnored() const { return ignored_; };
 
   // Returns the sampling exponent.
