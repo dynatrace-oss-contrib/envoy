@@ -29,12 +29,12 @@ envoy_extension_cc_test(
     name = "dynatrace_sampler_test",
     srcs = [
         "dynatrace_sampler_test.cc",
+        "dynatrace_tag_test.cc",
         "sampler_config_provider_test.cc",
         "sampler_config_test.cc",
         "sampling_controller_test.cc",
         "stream_summary_test.cc",
         "tenant_id_test.cc",
-        "dynatrace_tag_test.cc",
     ],
     extension_names = ["envoy.tracers.opentelemetry.samplers.dynatrace"],
     rbe_pool = "6gig",

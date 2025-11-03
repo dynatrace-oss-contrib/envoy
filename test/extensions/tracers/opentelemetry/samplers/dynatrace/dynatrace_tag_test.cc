@@ -41,7 +41,10 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::Values("fw4;0;0;0;0;0;10",    // missing path info
                       "fw4;0;0;0;0;0",       // missing sampling exponent and path info
                       "fw4;0;0;0;0",         // missing ignored, sampling exponent and path info
-                      "fw3;0;0;0;0;0;10;7b" // invalid version
+                      "fw3;0;0;0;0;0;10;7b", // invalid version
+                      "",                    // empty string
+                      "invalid_tag",         // completely invalid string
+                      "fw400;0;0;0;10;7b"    // missing delimiter between fields
                       ));
 
 } // namespace OpenTelemetry

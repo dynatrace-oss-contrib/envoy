@@ -1,9 +1,12 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
+#include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
+#include "absl/strings/string_view.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -70,10 +73,10 @@ private:
       : valid_(valid), ignored_(ignored), sampling_exponent_(sampling_exponent),
         path_info_(path_info) {}
 
-  bool valid_;
-  bool ignored_;
-  uint32_t sampling_exponent_;
-  uint32_t path_info_;
+  const bool valid_;
+  const bool ignored_;
+  const uint32_t sampling_exponent_;
+  const uint32_t path_info_;
 };
 
 } // namespace OpenTelemetry
