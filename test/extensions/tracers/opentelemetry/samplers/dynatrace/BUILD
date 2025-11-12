@@ -34,6 +34,7 @@ envoy_extension_cc_test(
         "sampler_config_test.cc",
         "sampling_controller_test.cc",
         "stream_summary_test.cc",
+        "trace_capture_reason_test.cc",
         "tenant_id_test.cc",
     ],
     extension_names = ["envoy.tracers.opentelemetry.samplers.dynatrace"],

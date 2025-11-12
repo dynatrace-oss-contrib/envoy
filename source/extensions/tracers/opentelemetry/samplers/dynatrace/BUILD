@@ -36,6 +36,7 @@ envoy_cc_library(
         "sampler_config_provider.h",
         "sampling_controller.h",
         "stream_summary.h",
+        "trace_capture_reason.h",
         "tenant_id.h",
     ],
     deps = [

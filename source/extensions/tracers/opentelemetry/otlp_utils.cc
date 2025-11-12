@@ -46,6 +46,13 @@ void OtlpUtils::populateAnyValue(opentelemetry::proto::common::v1::AnyValue& val
     value_proto.set_string_value(sv.data(), sv.size());
     break;
   }
+  case opentelemetry::common::AttributeType::kTypeSpanString: {
+    auto array_value = value_proto.mutable_array_value();
+    for (const auto& val : opentelemetry::nostd::get<opentelemetry::nostd::span<const opentelemetry::nostd::string_view>>(attribute_value)) {
+      array_value->add_values()->set_string_value(val.data(), val.size());
+    }
+    break;
+  }
   default:
     return;
   }
