@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "envoy/extensions/tracers/opentelemetry/samplers/v3/dynatrace_sampler.pb.h"
 
@@ -85,7 +86,14 @@ TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
                 sampling_result.attributes->find("supportability.atm_sampling_ratio")->second),
             1);
 
-  EXPECT_STREQ(sampling_result.tracestate.c_str(), "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101");
+  auto tcr = sampling_result.attributes->find("trace.capture.reasons");
+  EXPECT_NE(tcr, sampling_result.attributes->end());
+  auto tcr_values = opentelemetry::nostd::get<std::vector<absl::string_view>>(tcr->second);
+  ASSERT_EQ(tcr_values.size(), 1);
+  EXPECT_EQ(tcr_values[0], "atm");
+
+  EXPECT_STREQ(sampling_result.tracestate.c_str(),
+               "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
@@ -153,9 +161,9 @@ TEST_F(DynatraceSamplerTest, TestWithInvalidDynatraceParentContext1) {
       sampler_->shouldSample(stream_info_, parent_context, trace_id, "operation_name",
                              ::opentelemetry::proto::trace::v1::Span::SPAN_KIND_SERVER, {}, {});
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
-  EXPECT_STREQ(
-      sampling_result.tracestate.c_str(),
-      "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101,5b3f9fed-980df25c@dt=fw4;4;4af38366;0;0;0;X;123");
+  EXPECT_STREQ(sampling_result.tracestate.c_str(),
+               "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101,5b3f9fed-980df25c@dt=fw4;4;4af38366;"
+               "0;0;0;X;123");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
 }
@@ -173,7 +181,8 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextOtherVersion) {
   EXPECT_EQ(sampling_result.decision, Decision::RecordAndSample);
   EXPECT_STREQ(
       sampling_result.tracestate.c_str(),
-      "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101,5b3f9fed-980df25c@dt=fw3;4;4af38366;0;0;0;0;123;"
+      "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101,5b3f9fed-980df25c@dt=fw3;4;4af38366;0;0;0;0;"
+      "123;"
       "8eae;2h01;3h4af38366;4h00;5h01;6h67a9a23155e1741b5b35368e08e6ece5;7h9d83def9a4939b7b");
   EXPECT_TRUE(sampling_result.isRecording());
   EXPECT_TRUE(sampling_result.isSampled());
@@ -218,7 +227,8 @@ TEST_F(DynatraceSamplerTest, TestWithDynatraceParentContextFromDifferentTenant) 
             1);
   // new Dynatrace tag should be prepended, already existing tag should be kept
   const char* exptected =
-      "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101,6666ad40-980df25c@dt=fw4;4;4af38366;0;0;1;2;123;"
+      "5b3f9fed-980df25c@dt=fw4;0;0;0;0;0;0;95;8h0101,6666ad40-980df25c@dt=fw4;4;4af38366;0;0;1;2;"
+      "123;"
       "8eae;2h01;3h4af38366;4h00;5h01;6h67a9a23155e1741b5b35368e08e6ece5;7h9d83def9a4939b7b";
   EXPECT_STREQ(sampling_result.tracestate.c_str(), exptected);
   EXPECT_TRUE(sampling_result.isRecording());

@@ -23,6 +23,11 @@ class TraceCaptureReason {
   using PayloadBitMask = uint64_t;
 
   static const size_t MAX_PAYLOAD_SIZE = sizeof(Version) + sizeof(PayloadBitMask);
+  static constexpr absl::string_view kAtm = "atm";
+  static constexpr absl::string_view kFixed = "fixed";
+  static constexpr absl::string_view kCustom = "custom";
+  static constexpr absl::string_view kRum = "rum";
+  static constexpr absl::string_view kUnknown = "unknown";
 
 public:
   enum { InvalidVersion = 0u, Version1 = 1u };
@@ -79,19 +84,19 @@ public:
   std::vector<absl::string_view> toSpanAttributeValue() const {
     std::vector<absl::string_view> result;
     if (tcr_bitmask_ & Atm) {
-      result.push_back("atm");
+      result.push_back(kAtm);
     }
     if (tcr_bitmask_ & Fixed) {
-      result.push_back("fixed");
+      result.push_back(kFixed);
     }
     if (tcr_bitmask_ & Custom) {
-      result.push_back("custom");
+      result.push_back(kCustom);
     }
     if (tcr_bitmask_ & Rum) {
-      result.push_back("rum");
+      result.push_back(kRum);
     }
     if (result.empty()) {
-      result.push_back("unknown");
+      result.push_back(kUnknown);
     }
     return result;
   }

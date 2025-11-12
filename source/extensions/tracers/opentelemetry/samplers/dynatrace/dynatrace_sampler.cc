@@ -5,13 +5,12 @@
 
 #include "source/common/common/hash.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_tag.h"
-#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/trace_capture_reason.h"
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/tenant_id.h"
+#include "source/extensions/tracers/opentelemetry/samplers/dynatrace/trace_capture_reason.h"
 #include "source/extensions/tracers/opentelemetry/samplers/sampler.h"
 #include "source/extensions/tracers/opentelemetry/span_context.h"
 
 #include "absl/strings/str_cat.h"
-#include "opentelemetry/nostd/span.h"
 #include "opentelemetry/trace/trace_state.h"
 
 namespace Envoy {

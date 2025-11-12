@@ -36,8 +36,8 @@ envoy_cc_library(
         "sampler_config_provider.h",
         "sampling_controller.h",
         "stream_summary.h",
-        "trace_capture_reason.h",
         "tenant_id.h",
+        "trace_capture_reason.h",
     ],
     deps = [
         "//source/common/config:datasource_lib",
@@ -45,5 +45,6 @@ envoy_cc_library(
         "//source/extensions/tracers/opentelemetry/samplers:sampler_lib",
         "@envoy_api//envoy/config/core/v3:pkg_cc_proto",
         "@envoy_api//envoy/extensions/tracers/opentelemetry/samplers/v3:pkg_cc_proto",
+        "@com_google_absl//absl/types:optional",
     ],
 )
