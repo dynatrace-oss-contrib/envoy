@@ -6,10 +6,10 @@
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/trace_capture_reason.h"
 
 #include "absl/strings/numbers.h"
-#include "absl/types/optional.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/strings/string_view.h"
+#include "absl/types/optional.h"
 
 namespace Envoy {
 namespace Extensions {

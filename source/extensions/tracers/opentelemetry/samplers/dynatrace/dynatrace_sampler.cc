@@ -1,5 +1,6 @@
 #include "source/extensions/tracers/opentelemetry/samplers/dynatrace/dynatrace_sampler.h"
 
+#include <chrono>
 #include <memory>
 #include <string>
 
