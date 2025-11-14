@@ -65,9 +65,10 @@ public:
 
         if (ext.size() > 2 && ext.substr(0, 2) == "8h") {
           // Parse hex payload after '8h'
-          std::string hex = std::string(ext.substr(2));
+          absl::string_view hex = absl::string_view(ext.substr(2));
           TraceCaptureReason tcr = TraceCaptureReason::create(hex);
           tcr_extension.emplace(std::move(tcr));
+          break;
         }
       }
     }

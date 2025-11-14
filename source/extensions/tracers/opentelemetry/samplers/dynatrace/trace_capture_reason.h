@@ -26,6 +26,8 @@ class TraceCaptureReason {
   static constexpr absl::string_view kAtm = "atm";
   static constexpr absl::string_view kFixed = "fixed";
   static constexpr absl::string_view kCustom = "custom";
+  static constexpr absl::string_view kMainframe = "mainframe";
+  static constexpr absl::string_view kServerless = "serverless";
   static constexpr absl::string_view kRum = "rum";
   static constexpr absl::string_view kUnknown = "unknown";
 
@@ -91,6 +93,12 @@ public:
     }
     if (tcr_bitmask_ & Custom) {
       result.push_back(kCustom);
+    }
+    if (tcr_bitmask_ & Mainframe) {
+      result.push_back(kMainframe);
+    }
+    if (tcr_bitmask_ & Serverless) {
+      result.push_back(kServerless);
     }
     if (tcr_bitmask_ & Rum) {
       result.push_back(kRum);
