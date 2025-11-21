@@ -24,6 +24,7 @@ namespace OpenTelemetry {
  * - tag[5]: ignored field. 1 if a span is ignored (not sampled), 0 otherwise
  * - tag[6]: sampling exponent
  * - tag[7]: path info
+ * - tag[8]: optional extensions, e.g. trace capture reason
  */
 class DynatraceTag {
 public:
@@ -55,7 +56,7 @@ public:
     }
 
     // Parse optional payload for trace capture reason (id 8h)
-    absl::optional<TraceCaptureReason> tcr_extension = std::nullopt;
+    absl::optional<TraceCaptureReason> tcr_extension = absl::nullopt;
 
     if (tracestate_components.size() > 8) {
       // Extensions start at index 8

@@ -23,9 +23,9 @@ namespace OpenTelemetry {
 using OTelSpanKind = ::opentelemetry::proto::trace::v1::Span::SpanKind;
 
 /**
- * @brief Open-telemetry Attribute
+ * @brief Based Open-telemetry OwnedAttributeValue
  * see
- * https://github.com/open-telemetry/opentelemetry-cpp/blob/main/api/include/opentelemetry/common/attribute_value.h
+ * https://github.com/open-telemetry/opentelemetry-cpp/blob/main/sdk/include/opentelemetry/sdk/common/attribute_utils.h
  */
 using OTelAttribute =
     absl::variant<bool, int32_t, uint32_t, int64_t, double, std::string, absl::string_view,
@@ -33,26 +33,6 @@ using OTelAttribute =
                   std::vector<int64_t>, std::vector<double>, std::vector<std::string>,
                   std::vector<absl::string_view>, uint64_t, std::vector<uint64_t>,
                   std::vector<uint8_t>>;
-
-enum OTelAttributeType {
-  KTypeBool,
-  KTypeInt,
-  KTypeUInt,
-  KTypeInt64,
-  KTypeDouble,
-  KTypeString,
-  KTypeStringView,
-  KTypeSpanBool,
-  KTypeSpanInt,
-  KTypeSpanUInt,
-  KTypeSpanInt64,
-  KTypeSpanDouble,
-  KTypeSpanString,
-  KTypeSpanStringView,
-  KTypeUInt64,
-  KTypeSpanUInt64,
-  KTypeSpanByte
-};
 
 /**
  * @brief Container holding Open-telemetry Attributes

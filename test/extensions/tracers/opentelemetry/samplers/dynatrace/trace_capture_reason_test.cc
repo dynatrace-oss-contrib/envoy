@@ -59,9 +59,9 @@ TEST_F(TraceCaptureReasonTest, ParseReasonRum) {
 }
 
 TEST_F(TraceCaptureReasonTest, ParseMultipleReasonsATMCustomRum) {
-  auto tcr = TraceCaptureReason::create("0135"); // ATM + Custom + Rum
+  auto tcr = TraceCaptureReason::create("0125"); // ATM + Custom + Rum
   EXPECT_TRUE(tcr.isValid());
-  EXPECT_EQ(tcr.bitmaskHex(), "35");
+  EXPECT_EQ(tcr.bitmaskHex(), "25");
   auto reasons = tcr.toSpanAttributeValue();
   ASSERT_EQ(reasons.size(), 3);
   EXPECT_EQ(reasons[0], "atm");
@@ -81,6 +81,16 @@ TEST_F(TraceCaptureReasonTest, InvalidBitmask) {
 
 TEST_F(TraceCaptureReasonTest, InvalidShortPayload) {
   auto tcr = TraceCaptureReason::create("01"); // too short
+  EXPECT_FALSE(tcr.isValid());
+}
+
+TEST_F(TraceCaptureReasonTest, InvalidOddLengthPayload010) {
+  auto tcr = TraceCaptureReason::create("010"); // odd number of chars
+  EXPECT_FALSE(tcr.isValid());
+}
+
+TEST_F(TraceCaptureReasonTest, InvalidOddLengthPayload01010) {
+  auto tcr = TraceCaptureReason::create("01010"); // odd number of chars
   EXPECT_FALSE(tcr.isValid());
 }
 

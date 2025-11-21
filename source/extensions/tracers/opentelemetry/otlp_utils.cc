@@ -12,6 +12,26 @@ namespace Extensions {
 namespace Tracers {
 namespace OpenTelemetry {
 
+enum OTelAttributeType {
+  KTypeBool,
+  KTypeInt,
+  KTypeUInt,
+  KTypeInt64,
+  KTypeDouble,
+  KTypeString,
+  KTypeStringView,
+  KTypeSpanBool,
+  KTypeSpanInt,
+  KTypeSpanUInt,
+  KTypeSpanInt64,
+  KTypeSpanDouble,
+  KTypeSpanString,
+  KTypeSpanStringView,
+  KTypeUInt64,
+  KTypeSpanUInt64,
+  KTypeSpanByte
+};
+
 const std::string& OtlpUtils::getOtlpUserAgentHeader() {
   CONSTRUCT_ON_FIRST_USE(std::string,
                          fmt::format("OTel-OTLP-Exporter-Envoy/{}", Envoy::VersionInfo::version()));

@@ -18,13 +18,13 @@ class TraceCaptureReason {
   using PayloadBitMask = uint64_t;
 
   static const size_t MAX_PAYLOAD_SIZE = sizeof(Version) + sizeof(PayloadBitMask);
-  static constexpr absl::string_view kAtm = "atm";
-  static constexpr absl::string_view kFixed = "fixed";
-  static constexpr absl::string_view kCustom = "custom";
-  static constexpr absl::string_view kMainframe = "mainframe";
-  static constexpr absl::string_view kServerless = "serverless";
-  static constexpr absl::string_view kRum = "rum";
-  static constexpr absl::string_view kUnknown = "unknown";
+  static constexpr absl::string_view ATM = "atm";
+  static constexpr absl::string_view FIXED = "fixed";
+  static constexpr absl::string_view CUSTOM = "custom";
+  static constexpr absl::string_view MAINFRAME = "mainframe";
+  static constexpr absl::string_view SERVERLESS = "serverless";
+  static constexpr absl::string_view RUM = "rum";
+  static constexpr absl::string_view UNKNOWN = "unknown";
 
 public:
   enum { InvalidVersion = 0u, Version1 = 1u };
@@ -45,7 +45,7 @@ public:
   static TraceCaptureReason create(PayloadBitMask tcr_bitmask) { return {true, tcr_bitmask}; }
 
   static TraceCaptureReason create(const absl::string_view& payload_hex) {
-    if (payload_hex.size() < 4) {
+    if (payload_hex.size() < 4 || payload_hex.size() % 2 != 0) {
       // At least 1 byte for version and 1 byte for bitmask (2 hex chars each)
       return createInvalid();
     }
@@ -81,44 +81,31 @@ public:
   std::vector<absl::string_view> toSpanAttributeValue() const {
     std::vector<absl::string_view> result;
     if (tcr_bitmask_ & Atm) {
-      result.push_back(kAtm);
+      result.push_back(ATM);
     }
     if (tcr_bitmask_ & Fixed) {
-      result.push_back(kFixed);
+      result.push_back(FIXED);
     }
     if (tcr_bitmask_ & Custom) {
-      result.push_back(kCustom);
+      result.push_back(CUSTOM);
     }
     if (tcr_bitmask_ & Mainframe) {
-      result.push_back(kMainframe);
+      result.push_back(MAINFRAME);
     }
     if (tcr_bitmask_ & Serverless) {
-      result.push_back(kServerless);
+      result.push_back(SERVERLESS);
     }
     if (tcr_bitmask_ & Rum) {
-      result.push_back(kRum);
+      result.push_back(RUM);
     }
     if (result.empty()) {
-      result.push_back(kUnknown);
+      result.push_back(UNKNOWN);
     }
     return result;
   }
 
   std::string bitmaskHex() const {
-    // shortcut if only the first 8 bits are used, which will be the common case
-    if (tcr_bitmask_ < 0x100) {
-      return absl::StrCat(absl::Hex(static_cast<uint8_t>(tcr_bitmask_), absl::kZeroPad2));
-    }
-    std::string hex;
-    bool started = false;
-    for (int shift = 56; shift >= 0; shift -= 8) {
-      uint8_t b = static_cast<uint8_t>((tcr_bitmask_ >> shift) & 0xFF);
-      if (b != 0 || started || shift == 0) {
-        absl::StrAppend(&hex, absl::Hex(b, absl::kZeroPad2));
-        started = true;
-      }
-    }
-    return hex;
+    return absl::StrCat(absl::Hex(static_cast<uint8_t>(tcr_bitmask_), absl::kZeroPad2));
   }
 
 private:

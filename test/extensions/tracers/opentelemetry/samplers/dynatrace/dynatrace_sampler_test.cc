@@ -90,7 +90,7 @@ TEST_F(DynatraceSamplerTest, TestWithoutParentContext) {
             1);
 
   auto tcr = sampling_result.attributes->find("trace.capture.reasons");
-  EXPECT_NE(tcr, sampling_result.attributes->end());
+  ASSERT_NE(tcr, sampling_result.attributes->end());
   auto tcr_values = opentelemetry::nostd::get<std::vector<absl::string_view>>(tcr->second);
   ASSERT_EQ(tcr_values.size(), 1);
   EXPECT_EQ(tcr_values[0], "atm");
