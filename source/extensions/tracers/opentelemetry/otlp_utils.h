@@ -23,7 +23,7 @@ namespace OpenTelemetry {
 using OTelSpanKind = ::opentelemetry::proto::trace::v1::Span::SpanKind;
 
 /**
- * @brief Based Open-telemetry OwnedAttributeValue
+ * @brief Based on Open-telemetry OwnedAttributeValue
  * see
  * https://github.com/open-telemetry/opentelemetry-cpp/blob/main/sdk/include/opentelemetry/sdk/common/attribute_utils.h
  */
