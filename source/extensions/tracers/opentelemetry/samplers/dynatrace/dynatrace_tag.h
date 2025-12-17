@@ -28,6 +28,8 @@ namespace OpenTelemetry {
  * - tag[8]: optional extensions, e.g. trace capture reason
  */
 class DynatraceTag {
+  static constexpr uint64_t CHECKSUM_SEED = 3782874213;
+
 public:
   static DynatraceTag createInvalid() { return {false, false, 0, 0, absl::nullopt}; }
 
@@ -88,7 +90,7 @@ public:
 
     // Calculate a checksum for the extension
     std::string ext = absl::StrCat(";8h01", tcr_extension_->bitmaskHex());
-    uint64_t hash = MurmurHash::murmurHash2(ext, 0);
+    uint64_t hash = MurmurHash::murmurHash2(ext, CHECKSUM_SEED);
     uint16_t checksum = static_cast<uint16_t>(hash & 0xFFFF);
     std::string checksum_str = absl::StrCat(";", absl::Hex(checksum, absl::kZeroPad4));
     return absl::StrCat(base, checksum_str, ext);
